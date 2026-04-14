@@ -1,0 +1,292 @@
+{% extends 'base.html' %}
+
+{% block title %}Patient Medical Record - TeleMD{% endblock %}
+{% block body_class %}bg-light-blue{% endblock %}
+{% block nav_class %}solid-nav{% endblock %}
+
+{% block content %}
+<style>
+    .patient-sidebar {
+        background: #fff;
+        border-radius: 20px;
+        padding: 30px 20px;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.03);
+        text-align: center;
+    }
+    .profile-avatar {
+        width: 100px;
+        height: 100px;
+        border-radius: 50%;
+        object-fit: cover;
+        margin: 0 auto 20px;
+        background: #e9ecef;
+        display: block;
+    }
+    .phone-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 6px 16px;
+        border: 1px solid #e0e5ea;
+        border-radius: 20px;
+        font-size: 0.85rem;
+        color: #4a5568;
+        font-weight: 600;
+        margin-bottom: 25px;
+    }
+    
+    .record-title {
+        color: #1e272e;
+        font-weight: 800;
+        font-size: 1.6rem;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 25px;
+    }
+    
+    .stat-card-blank {
+        background: #fff;
+        border-radius: 12px;
+        height: 80px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.02);
+    }
+    .stat-card {
+        background: #fff;
+        border-radius: 12px;
+        padding: 15px 20px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.02);
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        height: 80px;
+    }
+    .stat-card-label {
+        font-size: 0.75rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        color: #7b8a97;
+        margin-bottom: 5px;
+    }
+    .stat-card-value {
+        font-size: 1.5rem;
+        font-weight: 800;
+        color: #222;
+        line-height: 1;
+    }
+    
+    .custom-tabs .nav-link {
+        color: #0d6efd;
+        font-weight: 700;
+        border: none !important;
+        background: transparent;
+        padding: 8px 20px;
+        font-size: 0.95rem;
+        border-radius: 20px;
+    }
+    .custom-tabs .nav-link.active {
+        background: #0d6efd !important;
+        color: #fff !important;
+    }
+    
+    .assessment-card {
+        background: #fff;
+        border-radius: 12px;
+        padding: 20px;
+        border: 1px solid rgba(0,0,0,0.04);
+        border-left: 4px solid #e74c3c;
+        margin-bottom: 20px;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.02);
+    }
+    .assessment-card.risk-high  { border-left-color: #e74c3c; }
+    .assessment-card.risk-medium { border-left-color: #f39c12; }
+    .assessment-card.risk-low   { border-left-color: #27ae60; }
+    .medication-card {
+        background: #fff;
+        border-radius: 12px;
+        padding: 20px;
+        border: 1px solid rgba(0,0,0,0.04);
+        border-left: 4px solid #27ae60;
+        margin-bottom: 20px;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.02);
+    }
+    .progress-bar.w-high   { width: 90%; }
+    .progress-bar.w-medium { width: 50%; }
+    .progress-bar.w-low    { width: 10%; }
+</style>
+
+<div class="row mt-4 mb-5">
+    <!-- Left Sidebar -->
+    <div class="col-lg-3 col-md-4 mb-4">
+        <div class="patient-sidebar">
+            <img src="{{ pat.get_avatar_url }}" class="profile-avatar shadow-sm" alt="Avatar">
+            
+            <h4 class="fw-bold mb-1" style="color: #222;">{{ pat.user.get_full_name|default:pat.user.username|title }}</h4>
+            <p class="text-muted small mb-3">{{ pat.user.email|default:"No email provided" }}</p>
+            
+            <div class="phone-pill">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="#0d6efd" stroke="#0d6efd" stroke-width="1"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 2.59 3.4L15.3 15.3a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+                {{ pat.phone_number|default:"No Phone" }}
+            </div>
+            
+            <div class="d-flex flex-column gap-3">
+                <a href="/consultations/call/{{ request.user.id }}_{{ pat.user.id }}/" class="btn text-white fw-bold d-flex align-items-center justify-content-center gap-2" style="background: #00a896; border-radius: 20px; padding: 12px;">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
+                    Quick Video Call
+                </a>
+                
+                <a href="{% url 'chat_room' pat.user.id %}" class="btn bg-white border border-secondary fw-bold text-dark d-flex align-items-center justify-content-center gap-2" style="border-radius: 20px; padding: 12px;">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" class="text-dark" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                    Send Message
+                </a>
+                
+                <button onclick="window.print()" class="btn bg-white border fw-bold text-muted d-flex align-items-center justify-content-center gap-2" style="border-radius: 20px; padding: 12px; border-color: #e0e5ea !important;">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
+                    Print Medical Record
+                </button>
+            </div>
+            
+        </div>
+    </div>
+    
+    <!-- Right Main Content -->
+    <div class="col-lg-9 col-md-8">
+        <h3 class="record-title" style="color: #0A3D62;">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+            Patient Medical Record
+        </h3>
+        
+        <div class="row mb-4">
+            <div class="col-md-4 mb-3">
+                <div class="stat-card-blank"></div>
+            </div>
+            <div class="col-md-4 mb-3">
+                <div class="stat-card-blank"></div>
+            </div>
+            <div class="col-md-4 mb-3">
+                <div class="stat-card">
+                    <div class="stat-card-label">PAST CONSULTATIONS</div>
+                    <div class="stat-card-value">{{ consultation_count|default:"0" }}</div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Tabs -->
+        <ul class="nav custom-tabs mb-4 gap-2" id="recordTabs" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="health-tab" data-bs-toggle="tab" data-bs-target="#health" type="button" role="tab">Health Assessments</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="medication-tab" data-bs-toggle="tab" data-bs-target="#medication" type="button" role="tab">Medication History</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="appointments-tab" data-bs-toggle="tab" data-bs-target="#appointments" type="button" role="tab">Appointments</button>
+            </li>
+        </ul>
+        
+        <!-- Tab Content -->
+        <div class="tab-content" id="recordTabsContent">
+            
+            <!-- Health Assessments Tab -->
+            <div class="tab-pane fade show active" id="health" role="tabpanel">
+                {% for log in assessments %}
+                <div class="assessment-card {% if log.overall_status == 'HIGH' %}risk-high{% elif log.overall_status == 'MEDIUM' %}risk-medium{% else %}risk-low{% endif %}">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h6 class="fw-bold mb-0 d-flex align-items-center gap-2">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
+                            Assessment on {{ log.created_at|date:"M d, Y" }}
+                        </h6>
+                        <small class="text-muted">{{ log.created_at|timesince }} ago</small>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <strong class="text-muted" style="font-size:0.8rem;">REPORTED SYMPTOMS:</strong><br>
+                        <span style="font-size:0.95rem;">{{ log.symptoms }}</span>
+                    </div>
+                    
+                    <div class="row mb-3">
+                        <div class="col-6">
+                            <small class="text-muted d-block mb-1">Malaria Risk</small>
+                            <div class="progress" style="height: 6px;">
+                                <div class="progress-bar {% if log.malaria_risk == 'HIGH' %}bg-danger w-high{% elif log.malaria_risk == 'MEDIUM' %}bg-warning w-medium{% else %}bg-success w-low{% endif %}"></div>
+                            </div>
+                            <small class="fw-bold mt-1 d-block {% if log.malaria_risk == 'HIGH' %}text-danger{% elif log.malaria_risk == 'MEDIUM' %}text-warning{% else %}text-success{% endif %}">{{ log.malaria_risk|title }}</small>
+                        </div>
+                        <div class="col-6">
+                            <small class="text-muted d-block mb-1">Cholera Risk</small>
+                            <div class="progress" style="height: 6px;">
+                                <div class="progress-bar {% if log.cholera_risk == 'HIGH' %}bg-danger w-high{% elif log.cholera_risk == 'MEDIUM' %}bg-warning w-medium{% else %}bg-success w-low{% endif %}"></div>
+                            </div>
+                            <small class="fw-bold mt-1 d-block {% if log.cholera_risk == 'HIGH' %}text-danger{% elif log.cholera_risk == 'MEDIUM' %}text-warning{% else %}text-success{% endif %}">{{ log.cholera_risk|title }}</small>
+                        </div>
+                    </div>
+                    
+                    <div class="p-2 rounded text-primary fw-bold" style="font-size:0.85rem; background: rgba(13,110,253,0.05);">
+                        <span class="text-dark">Doctor Guidance:</span> {{ log.ai_advice }}
+                    </div>
+                </div>
+                {% empty %}
+                <div class="alert alert-light text-center border py-4 text-muted">
+                    No health assessments recorded for this patient yet.
+                </div>
+                {% endfor %}
+            </div>
+            
+            <!-- Medication History Tab -->
+            <div class="tab-pane fade" id="medication" role="tabpanel">
+                {% for record in medical_records %}
+                    {% for rx in record.prescriptions.all %}
+                    <div class="medication-card">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h6 class="fw-bold mb-0 d-flex align-items-center gap-2" style="color: #27ae60;">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.87 2.651l-7.79 7.791a5.657 5.657 0 0 0 8 8l7.79-7.79a5.657 5.657 0 1 0-8-8z"></path><line x1="14" y1="14" x2="10" y2="10"></line></svg>
+                                {{ rx.drug_name }}
+                            </h6>
+                            <small class="text-muted">{{ record.created_at|date:"M d, Y" }}</small>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-4 mb-2">
+                                <small class="text-muted d-block" style="font-size:0.75rem;">DOSAGE</small>
+                                <span class="fw-bold">{{ rx.dosage }}</span>
+                            </div>
+                            <div class="col-md-4 mb-2">
+                                <small class="text-muted d-block" style="font-size:0.75rem;">FREQUENCY</small>
+                                <span class="fw-bold">{{ rx.frequency }}</span>
+                            </div>
+                            <div class="col-md-4 mb-2">
+                                <small class="text-muted d-block" style="font-size:0.75rem;">DURATION</small>
+                                <span class="fw-bold">{{ rx.duration }}</span>
+                            </div>
+                        </div>
+                        
+                        {% if rx.instructions %}
+                        <div class="mt-3 p-2 bg-light rounded text-dark" style="font-size:0.85rem;">
+                            <strong>Instructions:</strong> {{ rx.instructions }}
+                        </div>
+                        {% endif %}
+                        <div class="mt-2 text-end">
+                            <small class="text-muted" style="font-size:0.7rem;">Prescribed by Dr. {{ record.doctor.user.get_full_name|default:record.doctor.user.username }}</small>
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% empty %}
+                <div class="alert alert-light text-center border py-4 text-muted">
+                    No medication history available.
+                </div>
+                {% endfor %}
+            </div>
+            
+            <!-- Appointments Tab -->
+            <div class="tab-pane fade" id="appointments" role="tabpanel">
+                <div class="alert alert-light text-center border py-4 text-muted">
+                    Appointments history integration pending. View dashboard for upcoming.
+                </div>
+            </div>
+            
+        </div>
+        
+    </div>
+</div>
+
+{% endblock %}

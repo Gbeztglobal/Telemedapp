@@ -1,0 +1,289 @@
+{% extends 'base.html' %}
+
+{% block title %}Diagnosis Result - TeleMD{% endblock %}
+{% block body_class %}bg-light-blue{% endblock %}
+{% block nav_class %}solid-nav{% endblock %}
+
+{% block content %}
+<style>
+    .result-card {
+        background: #fff;
+        border-radius: 16px;
+        padding: 40px;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.04);
+        max-width: 800px;
+        margin: 0 auto;
+    }
+    
+    .risk-bar-container {
+        background: #f4f8fb;
+        border-radius: 30px;
+        height: 24px;
+        width: 100%;
+        overflow: hidden;
+        margin-top: 10px;
+    }
+    
+    .risk-bar {
+        height: 100%;
+        border-radius: 30px;
+        transition: width 1s ease-in-out;
+    }
+    
+    .urgent-banner {
+        background: rgba(220, 53, 69, 0.1);
+        border: 2px solid #dc3545;
+        color: #dc3545;
+        padding: 20px;
+        border-radius: 12px;
+        margin-top: 30px;
+        display: flex;
+        align-items: center;
+        gap: 15px;
+    }
+
+    .drug-section-title {
+        font-size: 1.1rem;
+        font-weight: 800;
+        color: #0A3D62;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 20px;
+        flex-wrap: wrap;
+    }
+    .drug-card {
+        background: #f8fbff;
+        border: 1px solid #d0e4f7;
+        border-left: 5px solid #00a896;
+        border-radius: 12px;
+        padding: 18px 20px;
+        margin-bottom: 14px;
+    }
+    .drug-card .drug-name {
+        font-weight: 800;
+        font-size: 1.05rem;
+        color: #0A3D62;
+        margin-bottom: 4px;
+    }
+    .drug-card .drug-condition {
+        font-size: 0.72rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        color: #00a896;
+        margin-bottom: 8px;
+    }
+    .drug-card .drug-dose {
+        font-size: 0.88rem;
+        font-weight: 600;
+        color: #333;
+        margin-bottom: 5px;
+    }
+    .drug-card .drug-notes {
+        font-size: 0.8rem;
+        color: #6c757d;
+        font-style: italic;
+    }
+    .drug-card.urgent-drug {
+        border-left-color: #dc3545;
+        background: #fff8f8;
+        border-color: #f8d7da;
+    }
+    .ai-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        background: linear-gradient(135deg, #0A3D62, #00a896);
+        color: white;
+        font-size: 0.7rem;
+        font-weight: 800;
+        letter-spacing: 0.5px;
+        padding: 4px 12px;
+        border-radius: 20px;
+        text-transform: uppercase;
+    }
+
+    /* ── Mobile Responsive ── */
+    @media (max-width: 767.98px) {
+        .result-card {
+            padding: 20px 16px;
+            border-radius: 12px;
+        }
+        .result-card h2 { font-size: 1.4rem !important; }
+        .result-card .log-badge { font-size: 0.72rem !important; }
+        .result-icon { width: 44px !important; height: 44px !important; }
+
+        .urgent-banner {
+            flex-direction: column;
+            text-align: center;
+            padding: 16px;
+            gap: 10px;
+        }
+        .urgent-banner svg { width: 32px !important; height: 32px !important; }
+        .urgent-banner h5 { font-size: 1rem; }
+        .urgent-banner p { font-size: 0.85rem; }
+
+        .drug-section-title {
+            font-size: 0.92rem;
+            gap: 6px;
+        }
+        .drug-card {
+            padding: 14px;
+        }
+        .drug-card .drug-name { font-size: 0.92rem; }
+        .drug-card .drug-dose { font-size: 0.82rem; }
+
+        .result-actions {
+            flex-direction: column !important;
+            gap: 10px !important;
+        }
+        .result-actions a {
+            width: 100%;
+            margin: 0 !important;
+            text-align: center;
+        }
+    }
+</style>
+
+<div class="row mt-4 mt-md-5">
+    <div class="col-12">
+        <div class="result-card">
+            <div class="text-center mb-4 mb-md-5">
+                <svg class="result-icon mb-3" width="60" height="60" viewBox="0 0 24 24" fill="none" stroke="#0A3D62" stroke-width="2">
+                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                    <line x1="16" y1="2" x2="16" y2="6"></line>
+                    <line x1="8" y1="2" x2="8" y2="6"></line>
+                    <line x1="3" y1="10" x2="21" y2="10"></line>
+                    <path d="M9 16l2 2 4-4"></path>
+                </svg>
+                <h2 class="fw-bold" style="color: #0A3D62;">Diagnosis Complete</h2>
+                <p class="text-muted mb-2" style="font-size: 0.9rem;">Analysis of symptoms: <strong>{{ diagnosis.symptoms_reported }}</strong></p>
+                <span class="log-badge badge bg-light text-dark border px-3 py-2 rounded-pill mt-2" style="font-size: 0.78rem;">Log ID: TMD-{{ diagnosis.pk }} • {{ diagnosis.created_at|date:"M d, Y" }}</span>
+            </div>
+            
+            <div class="row mt-4">
+                <div class="col-6 mb-3 mb-md-4">
+                    <div class="card border-0 bg-light p-3 p-md-4 rounded-4 text-center h-100">
+                        <h5 class="fw-bold mb-2 mb-md-3" style="color: #0A3D62; font-size: 0.95rem;">Malaria Risk</h5>
+                        <h3 class="fw-bold mb-1" id="malariaText" style="font-size: 1.2rem;">{{ diagnosis.malaria_risk }}</h3>
+                        
+                        <div class="risk-bar-container">
+                            <div class="risk-bar" id="malariaBar" style="width: 0%; background: #00a896;"></div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-6 mb-3 mb-md-4">
+                    <div class="card border-0 bg-light p-3 p-md-4 rounded-4 text-center h-100">
+                        <h5 class="fw-bold mb-2 mb-md-3" style="color: #0A3D62; font-size: 0.95rem;">Cholera Risk</h5>
+                        <h3 class="fw-bold mb-1" id="choleraText" style="font-size: 1.2rem;">{{ diagnosis.cholera_risk }}</h3>
+                        
+                        <div class="risk-bar-container">
+                            <div class="risk-bar" id="choleraBar" style="width: 0%; background: #00a896;"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            {% if diagnosis.is_urgent %}
+            <div class="urgent-banner">
+                <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+                    <line x1="12" y1="9" x2="12" y2="13"></line>
+                    <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                </svg>
+                <div>
+                    <h5 class="fw-bold mb-1">High Risk Detected</h5>
+                    <p class="mb-0">Your symptoms strongly match critical criteria. Please contact a health worker immediately.</p>
+                </div>
+            </div>
+            {% endif %}
+
+            {% if diagnosis.drug_recommendations %}
+            <hr class="text-muted opacity-25 my-4 my-md-5">
+            <div>
+                <div class="drug-section-title">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.87 2.651l-7.79 7.791a5.657 5.657 0 0 0 8 8l7.79-7.79a5.657 5.657 0 1 0-8-8z"></path><line x1="14" y1="14" x2="10" y2="10"></line></svg>
+                    <span>AI-Predicted Drug Recommendations</span>
+                    <span class="ai-badge">✦ AI Generated</span>
+                    {% if diagnosis.patient.age %}
+                    <span class="badge bg-light text-dark border rounded-pill px-3" style="font-size: 0.72rem;">Age {{ diagnosis.patient.age }} yrs</span>
+                    {% endif %}
+                </div>
+                <p class="text-muted small mb-4" style="font-size: 0.82rem;">The following medications are algorithmically predicted based on your reported symptoms and age profile. <strong>This is not a substitute for professional medical advice.</strong> Always confirm with a licensed doctor before taking any medication.</p>
+
+                {% for drug in diagnosis.drug_recommendations %}
+                <div class="drug-card {% if 'URGENT' in drug.notes or 'INFAN' in drug.condition %}urgent-drug{% endif %}">
+                    <div class="drug-condition">{{ drug.condition }}</div>
+                    <div class="drug-name">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#00a896" stroke-width="2" class="me-1"><path d="M10.87 2.651l-7.79 7.791a5.657 5.657 0 0 0 8 8l7.79-7.79a5.657 5.657 0 1 0-8-8z"></path></svg>
+                        {{ drug.drug }}
+                    </div>
+                    <div class="drug-dose">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="me-1"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                        Dose: {{ drug.dose }}
+                    </div>
+                    <div class="drug-notes">📝 {{ drug.notes }}</div>
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+            
+            <hr class="text-muted opacity-25 my-4 my-md-5">
+            
+            <div class="result-actions d-flex justify-content-center gap-3">
+                <a href="{% url 'patient_dashboard' %}" class="btn btn-light border py-3 px-4 fw-bold rounded-pill text-dark">
+                    Back to Dashboard
+                </a>
+                <a href="{% url 'book_appointment' %}{% if diagnosis.is_urgent %}?urgent=1{% endif %}" class="btn btn-primary py-3 px-4 px-md-5 fw-bold rounded-pill" style="background:#00a896; border:none;">
+                    Consult a Doctor
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Map Django text output to percentage bar logic
+        function parseRisk(riskStr) {
+            riskStr = riskStr.toLowerCase();
+            if (riskStr.includes('high')) return 85;
+            if (riskStr.includes('moderate')) return 50;
+            if (riskStr.includes('low')) return 15;
+            return 0; // Unknown
+        }
+        
+        function colorRisk(percent, barElem, textElem) {
+            if (percent >= 80) {
+                barElem.style.background = '#dc3545'; // Red
+                textElem.style.color = '#dc3545';
+            } else if (percent >= 40) {
+                barElem.style.background = '#ffc107'; // Yellow
+                textElem.style.color = '#e0a800';
+            } else {
+                barElem.style.background = '#28a745'; // Green
+                textElem.style.color = '#28a745';
+            }
+        }
+        
+        const mRisk = '{{ diagnosis.malaria_risk }}';
+        const cRisk = '{{ diagnosis.cholera_risk }}';
+        
+        const mPercent = parseRisk(mRisk);
+        const cPercent = parseRisk(cRisk);
+        
+        setTimeout(() => {
+            const mBar = document.getElementById('malariaBar');
+            const cBar = document.getElementById('choleraBar');
+            
+            mBar.style.width = mPercent + '%';
+            cBar.style.width = cPercent + '%';
+            
+            colorRisk(mPercent, mBar, document.getElementById('malariaText'));
+            colorRisk(cPercent, cBar, document.getElementById('choleraText'));
+        }, 300); // 300ms delay for animation
+    });
+</script>
+{% endblock %}

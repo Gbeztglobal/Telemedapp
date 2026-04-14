@@ -1,0 +1,149 @@
+{% extends 'base.html' %}
+
+{% block title %}Account Settings - TeleMD{% endblock %}
+{% block body_class %}bg-light-blue{% endblock %}
+{% block nav_class %}solid-nav{% endblock %}
+
+{% block content %}
+<style>
+    .settings-container {
+        max-width: 700px;
+        margin: 0 auto;
+    }
+    .profile-header-card {
+        background: linear-gradient(135deg, #0A3D62 0%, #1e547a 100%);
+        border-radius: 20px;
+        padding: 40px;
+        color: white;
+        text-align: center;
+        box-shadow: 0 10px 30px rgba(10, 61, 98, 0.15);
+        margin-bottom: -40px;
+        position: relative;
+        z-index: 1;
+    }
+    .profile-avatar-large {
+        width: 100px;
+        height: 100px;
+        border-radius: 50%;
+        background: white;
+        padding: 5px;
+        margin: 0 auto 15px auto;
+        box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+    }
+    .settings-body-card {
+        background: #fff;
+        border-radius: 20px;
+        padding: 60px 40px 40px;
+        box-shadow: 0 8px 30px rgba(0,0,0,0.04);
+        position: relative;
+        z-index: 2;
+    }
+    .form-group-custom label {
+        font-size: 0.75rem;
+        font-weight: 800;
+        color: #7b8a97;
+        text-transform: uppercase;
+        margin-bottom: 8px;
+        letter-spacing: 0.5px;
+    }
+    .form-group-custom .form-control {
+        background: #fbfbfc !important;
+        border: 2px solid #eef1f5 !important;
+        border-radius: 12px;
+        padding: 15px;
+        color: #000 !important;
+        font-weight: 600;
+        transition: all 0.3s ease;
+    }
+    .form-group-custom .form-control:focus {
+        border-color: #0A3D62 !important;
+        box-shadow: 0 6px 15px rgba(10, 61, 98, 0.08) !important;
+        background: #fff !important;
+    }
+    
+    .locked-field {
+        background: transparent;
+        border: none;
+        padding: 0;
+        margin-bottom: 20px;
+    }
+    .locked-label {
+        font-size: 0.7rem;
+        font-weight: 800;
+        color: #adb5bd;
+        text-transform: uppercase;
+        margin-bottom: 3px;
+        display: block;
+    }
+    .locked-value {
+        font-size: 0.95rem;
+        font-weight: 700;
+        color: #495057;
+    }
+</style>
+
+<div class="container py-5 mt-4">
+    <div class="settings-container">
+        
+        <div class="profile-header-card">
+            <img src="{% if user.role == 'PATIENT' %}{{ user.patient_profile.get_avatar_url }}{% else %}{{ user.doctor_profile.get_avatar_url }}{% endif %}" class="profile-avatar-large shadow-lg">
+            <h3 class="fw-bold mb-1">{{ user.get_full_name|default:user.username|title }}</h3>
+            <p class="mb-0 opacity-75 fw-bold" style="letter-spacing: 1px;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="me-1"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>{{ user.get_role_display|upper }} ACCOUNT</p>
+        </div>
+        
+        <div class="settings-body-card">
+            <form method="POST" action="{% url 'edit_profile' %}">
+                {% csrf_token %}
+                
+                {% if messages %}
+                    {% for message in messages %}
+                        <div class="alert alert-success fw-bold text-center border-0 rounded-pill mb-4" style="background: rgba(39, 174, 96, 0.1); color: #27ae60;" role="alert">
+                            {{ message }}
+                        </div>
+                    {% endfor %}
+                {% endif %}
+
+                <div class="row px-3 mb-4">
+                    <div class="col-6 locked-field">
+                        <span class="locked-label">Username</span>
+                        <div class="locked-value">@{{ user.username }}</div>
+                    </div>
+                    {% if user.role == 'DOCTOR' %}
+                    <div class="col-6 locked-field">
+                        <span class="locked-label">Medical License</span>
+                        <div class="locked-value d-flex align-items-center gap-1">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#27ae60" stroke-width="3"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                            {{ user.doctor_profile.license_number|default:"Verified" }}
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+                
+                <h6 class="fw-bold mb-4 d-flex align-items-center gap-2" style="color: #0A3D62;">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                    Editable Contact Details
+                </h6>
+
+                <div class="form-group-custom mb-4">
+                    <label>Primary Email Address</label>
+                    <input type="email" class="form-control" name="email" value="{{ user.email }}" required>
+                </div>
+
+                <div class="form-group-custom mb-5">
+                    <label>Active Phone Number</label>
+                    <input type="tel" class="form-control" name="phone_number" value="{% if user.role == 'PATIENT' %}{{ user.patient_profile.phone_number }}{% else %}{{ user.doctor_profile.phone_number }}{% endif %}" required>
+                </div>
+                
+                <button type="submit" class="btn btn-primary w-100 py-3 fw-bold rounded-pill shadow-hover d-flex align-items-center justify-content-center gap-2" style="background:#0A3D62; border:none; font-size:1.1rem;">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
+                    Save Digital Profile Configuration
+                </button>
+                
+                <div class="text-center mt-4">
+                    <a href="{% url 'dashboard_router' %}" class="fw-bold" style="color: #adb5bd; font-size: 0.95rem; text-decoration: none; transition: 0.2s;">Return to Dashboard</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,83 @@
+{% extends 'base.html' %}
+
+{% block title %}Issue E-Prescription - {{ appointment.patient.user.get_full_name|default:appointment.patient.user.username }}{% endblock %}
+
+{% block body_class %}bg-light-blue{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Force input text color to black for perfect visibility */
+    .form-control {
+        color: #000 !important;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <h3 class="fw-bold mb-4" style="color: #0A3D62;">Clinical Action: Medical Record & E-Prescription</h3>
+            
+            <div class="card border-0 shadow-sm rounded-4 p-4 mb-4">
+                <div class="d-flex align-items-center gap-3 mb-4">
+                    <img src="{{ appointment.patient.get_avatar_url }}" width="60" class="rounded-circle border">
+                    <div>
+                        <h5 class="mb-0 fw-bold">{{ appointment.patient.user.get_full_name|default:appointment.patient.user.username }}</h5>
+                        <p class="text-muted mb-0">Consultation Date: {{ appointment.appointment_date|date:"F j, Y, g:i a" }}</p>
+                    </div>
+                </div>
+
+                <form method="POST">
+                    {% csrf_token %}
+                    
+                    <h5 class="fw-bold mb-3 border-bottom pb-2">1. Diagnosis & Notes</h5>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Primary Diagnosis</label>
+                        <input type="text" name="diagnosis" class="form-control bg-light" required placeholder="e.g. Uncomplicated Malaria">
+                    </div>
+                    <div class="mb-4">
+                        <label class="form-label fw-bold">Clinical Notes</label>
+                        <textarea name="notes" class="form-control bg-light" rows="3" placeholder="Patient presented with..."></textarea>
+                    </div>
+
+                    <h5 class="fw-bold mb-3 border-bottom pb-2">2. E-Prescription</h5>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-bold">Drug Name</label>
+                            <input type="text" name="drug_name" class="form-control bg-light" placeholder="e.g. Artemether-Lumefantrine">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-bold">Dosage</label>
+                            <input type="text" name="dosage" class="form-control bg-light" placeholder="e.g. 500mg">
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-bold">Frequency</label>
+                            <input type="text" name="frequency" class="form-control bg-light" placeholder="e.g. Twice daily (12h)">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-bold">Duration</label>
+                            <input type="text" name="duration" class="form-control bg-light" placeholder="e.g. 3 days">
+                        </div>
+                    </div>
+                    <div class="mb-4">
+                        <label class="form-label fw-bold">Special Instructions</label>
+                        <input type="text" name="instructions" class="form-control bg-light" placeholder="Take with food...">
+                    </div>
+
+                    <div class="form-check form-switch mb-4">
+                        <input class="form-check-input" type="checkbox" role="switch" name="digital_sig" id="digitalSig" required>
+                        <label class="form-check-label fw-bold text-success" for="digitalSig">Sign this E-Prescription as {{ request.user.get_full_name|default:request.user.username }}</label>
+                    </div>
+
+                    <div class="d-grid mt-4">
+                        <button type="submit" class="btn btn-teal btn-lg fw-bold rounded-pill">Authorize & Send to Patient</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

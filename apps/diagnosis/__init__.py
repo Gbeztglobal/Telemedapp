@@ -1,0 +1,1 @@
+# Initialize diagnosis app

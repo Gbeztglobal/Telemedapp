@@ -1,0 +1,3 @@
+# Pyrefly configuration
+# Points to the project virtual environment so Django imports resolve correctly
+python_interpreter = ".venv/Scripts/python.exe"

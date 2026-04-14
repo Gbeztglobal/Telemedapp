@@ -1,0 +1,258 @@
+{% extends 'base.html' %}
+
+{% block title %}AI Symptom Checker - TeleMD{% endblock %}
+{% block body_class %}bg-light-blue{% endblock %}
+{% block nav_class %}solid-nav{% endblock %}
+
+{% block content %}
+<style>
+    .eval-card {
+        background: #fff;
+        border-radius: 16px;
+        padding: 50px;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.02);
+        max-width: 900px;
+        margin: 0 auto;
+    }
+    .col-left {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding-right: 30px;
+    }
+    .col-right {
+        padding-left: 30px;
+    }
+    .section-label {
+        font-size: 0.85rem;
+        font-weight: 800;
+        color: #7b8a97;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-bottom: 20px;
+    }
+    .body-figure {
+        max-width: 160px;
+        margin-top: 10px;
+    }
+    .body-part {
+        fill: #e8f0fe;
+        stroke: #c2d1e0;
+        stroke-width: 2;
+        transition: fill 0.3s;
+        cursor: pointer;
+    }
+    .body-part:hover, .body-part.selected {
+        fill: #d3e3fc;
+        stroke: #0A3D62;
+    }
+    .section-title {
+        color: #1e272e;
+        font-weight: 800;
+        font-size: 1.1rem;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 15px;
+    }
+    .symptom-chip {
+        display: inline-block;
+        padding: 6px 16px;
+        margin: 4px;
+        border-radius: 20px;
+        background: #fff;
+        border: 1px solid #7b8a97;
+        color: #555;
+        font-size: 0.85rem;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+    .symptom-chip:hover {
+        border-color: #0A3D62;
+    }
+    .symptom-chip.selected {
+        border-color: #0A3D62;
+        color: #0A3D62;
+        background: #f4f8fb;
+        font-weight: 700;
+    }
+    .custom-textarea {
+        background: #fbfbfc;
+        border: none;
+        border-radius: 12px;
+        padding: 20px;
+        width: 100%;
+        resize: none;
+        font-size: 0.95rem;
+        color: #1e272e;
+    }
+    .custom-textarea::placeholder {
+        color: #888;
+    }
+    .custom-textarea:focus {
+        outline: none;
+        background: #f4f8fb;
+    }
+    .custom-input {
+        background: #fbfbfc;
+        border: none;
+        border-radius: 20px;
+        padding: 12px 20px;
+        width: 100%;
+        font-size: 0.95rem;
+        color: #1e272e;
+    }
+    .custom-input::placeholder {
+        color: #888;
+    }
+    .custom-input:focus {
+        outline: none;
+        background: #f4f8fb;
+    }
+    .btn-evaluate {
+        background: #0A3D62;
+        color: white;
+        border: none;
+        border-radius: 30px;
+        padding: 15px;
+        width: 100%;
+        font-weight: 700;
+        font-size: 1.1rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+        margin-top: 30px;
+        transition: background 0.3s;
+    }
+    .btn-evaluate:hover {
+        background: #0d4675;
+    }
+    @media (max-width: 768px) {
+        .col-left { border-bottom: 1px solid #f0f0f0; padding-right: 0; padding-bottom: 30px; margin-bottom: 30px;}
+        .col-right { padding-left: 0; }
+    }
+</style>
+
+<div class="row mt-4 mb-5">
+    <div class="col-12">
+        <div class="eval-card">
+            <form method="POST" action="{% url 'symptom_checker' %}">
+                {% csrf_token %}
+                <div class="row">
+                    <!-- Left Column -->
+                    <div class="col-md-5 col-left">
+                        <div class="section-label">TAP PAIN AREAS</div>
+                        <svg class="body-figure" viewBox="0 0 100 250" xmlns="http://www.w3.org/2000/svg">
+                            <!-- Head -->
+                            <circle cx="50" cy="30" r="15" class="body-part" data-part="head"/>
+                            <!-- Torso -->
+                            <polygon points="35,50 65,50 70,120 30,120" class="body-part" data-part="torso"/>
+                            <!-- Left Arm -->
+                            <line x1="30" y1="55" x2="8" y2="120" stroke="#c2d1e0" stroke-width="2"/>
+                            <!-- Right Arm -->
+                            <line x1="70" y1="55" x2="92" y2="120" stroke="#c2d1e0" stroke-width="2"/>
+                            <!-- Pelvis -->
+                            <polygon points="32,125 68,125 72,150 28,150" class="body-part" data-part="pelvis"/>
+                            <!-- Left Leg -->
+                            <line x1="35" y1="155" x2="20" y2="240" stroke="#c2d1e0" stroke-width="2"/>
+                            <!-- Right Leg -->
+                            <line x1="65" y1="155" x2="80" y2="240" stroke="#c2d1e0" stroke-width="2"/>
+                        </svg>
+                        <input type="hidden" name="pain_areas" id="painAreasInput">
+                    </div>
+                    
+                    <!-- Right Column -->
+                    <div class="col-md-7 col-right">
+                        <div class="mb-4">
+                            <div class="section-title">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0A3D62" stroke-width="2">
+                                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                                    <circle cx="12" cy="7" r="4"></circle>
+                                </svg>
+                                Symptom Breakdown
+                            </div>
+                            <div class="d-flex flex-wrap gap-1 mb-3" id="chipContainer">
+                                <div class="symptom-chip" data-value="Fever">Fever</div>
+                                <div class="symptom-chip" data-value="Headache">Headache</div>
+                                <div class="symptom-chip" data-value="Diarrhea">Diarrhea</div>
+                                <div class="symptom-chip" data-value="Vomiting">Vomiting</div>
+                                <div class="symptom-chip" data-value="Body Pain">Body Pain</div>
+                            </div>
+                            <input type="hidden" name="symptoms" id="symptomInput">
+                            
+                            <div style="position:relative;">
+                                <textarea class="custom-textarea mt-2" name="notes" rows="4" placeholder="Describe your condition here..."></textarea>
+                                <svg style="position:absolute; bottom:20px; right:20px;" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ccc" stroke-width="2"><line x1="22" y1="2" x2="2" y2="22"></line><line x1="15" y1="2" x2="2" y2="15"></line></svg>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-4 mt-5">
+                            <div class="section-title">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#00a896" stroke-width="2">
+                                    <path d="M10.5 20.5A7 7 0 1 1 20.5 10.5L10.5 20.5z"></path>
+                                    <path d="M14 6l4 4"></path>
+                                </svg>
+                                Ongoing Meds (Optional)
+                            </div>
+                            <input type="text" name="medications" class="custom-input mt-2" placeholder="e.g. Paracetamol...">
+                        </div>
+                        
+                        <button type="submit" class="btn-evaluate" id="submitBtn">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+                                <polyline points="9 12 11 14 15 10"></polyline>
+                            </svg>
+                            Execute Evaluation
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const chips = document.querySelectorAll('.symptom-chip');
+        const symptomInput = document.getElementById('symptomInput');
+        let selectedSymptoms = new Set();
+        
+        chips.forEach(chip => {
+            chip.addEventListener('click', function() {
+                const val = this.getAttribute('data-value');
+                if(selectedSymptoms.has(val)) {
+                    selectedSymptoms.delete(val);
+                    this.classList.remove('selected');
+                } else {
+                    selectedSymptoms.add(val);
+                    this.classList.add('selected');
+                }
+                updateSymptoms();
+            });
+        });
+        
+        function updateSymptoms() {
+            symptomInput.value = Array.from(selectedSymptoms).join(', ');
+        }
+
+        const bodyParts = document.querySelectorAll('.body-part');
+        const painAreasInput = document.getElementById('painAreasInput');
+        let selectedPainAreas = new Set();
+
+        bodyParts.forEach(part => {
+            part.addEventListener('click', function() {
+                const val = this.getAttribute('data-part');
+                if(selectedPainAreas.has(val)) {
+                    selectedPainAreas.delete(val);
+                    this.classList.remove('selected');
+                } else {
+                    selectedPainAreas.add(val);
+                    this.classList.add('selected');
+                }
+                painAreasInput.value = Array.from(selectedPainAreas).join(', ');
+            });
+        });
+    });
+</script>
+{% endblock %}

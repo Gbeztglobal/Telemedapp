@@ -1,0 +1,797 @@
+{% extends 'base.html' %}
+
+{% block title %}Chat - {{ target_user.username }}{% endblock %}
+{% block body_class %}chat-page-bg{% endblock %}
+{% block nav_class %}solid-nav{% endblock %}
+
+{% block extra_css %}
+<style>
+    body.chat-page-bg {
+        background: #f0f4f8;
+    }
+
+    /* ── Full-height chat shell ── */
+    .wa-shell {
+        display: flex;
+        flex-direction: column;
+        height: calc(100vh - 88px); /* subtract navbar + top margin */
+        max-width: 900px;
+        margin: 16px auto;
+        border-radius: 12px;
+        overflow: hidden;
+        box-shadow: 0 10px 40px rgba(0,0,0,0.12);
+    }
+    @media (max-width: 991.98px) {
+        .wa-shell {
+            height: calc(100vh - 58px);
+            border-radius: 0;
+            margin: 0;
+            box-shadow: none;
+        }
+    }
+
+    /* ── Header ── */
+    .wa-header {
+        background: #0A3D62;
+        padding: 12px 16px;
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        flex-shrink: 0;
+        z-index: 10;
+    }
+    .wa-back-btn {
+        color: rgba(255,255,255,0.85);
+        text-decoration: none;
+        display: flex;
+        align-items: center;
+        transition: color 0.2s;
+    }
+    .wa-back-btn:hover { color: #fff; }
+    .wa-avatar-wrap { position: relative; }
+    .wa-avatar {
+        width: 42px;
+        height: 42px;
+        border-radius: 50%;
+        border: 2px solid rgba(255,255,255,0.3);
+        object-fit: cover;
+    }
+    .wa-online-dot {
+        width: 11px;
+        height: 11px;
+        background: #25D366;
+        border: 2px solid #0A3D62;
+        border-radius: 50%;
+        position: absolute;
+        bottom: 1px;
+        right: 1px;
+    }
+    .wa-user-info { flex: 1; }
+    .wa-user-name {
+        color: #fff;
+        font-weight: 700;
+        font-size: 1rem;
+        letter-spacing: 0.3px;
+        margin: 0;
+        line-height: 1.2;
+    }
+    .wa-user-status {
+        color: rgba(255,255,255,0.7);
+        font-size: 0.75rem;
+        margin: 0;
+    }
+    .wa-actions {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+    .wa-action-btn {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        border: none;
+        background: rgba(255,255,255,0.1);
+        color: #fff;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        text-decoration: none;
+        transition: background 0.2s;
+        flex-shrink: 0;
+    }
+    .wa-action-btn:hover {
+        background: rgba(255,255,255,0.25);
+        color: #fff;
+    }
+    .wa-action-btn.video {
+        background: rgba(37,211,102,0.25);
+    }
+    .wa-action-btn.video:hover {
+        background: rgba(37,211,102,0.45);
+    }
+
+    /* ── Messages area ── */
+    .wa-messages {
+        flex: 1;
+        overflow-y: auto;
+        padding: 20px 16px;
+        background: #f0f4f8;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='60' height='60' opacity='0.04'%3E%3Cpath d='M30 0L60 30L30 60L0 30Z' fill='%230A3D62'/%3E%3C/svg%3E");
+    }
+
+    /* Date separator */
+    .wa-date-sep {
+        text-align: center;
+        margin: 10px 0 16px;
+    }
+    .wa-date-sep span {
+        background: rgba(255,255,255,0.7);
+        backdrop-filter: blur(4px);
+        color: #555;
+        font-size: 0.72rem;
+        font-weight: 600;
+        padding: 4px 14px;
+        border-radius: 20px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+    }
+
+    /* Bubble wrapper */
+    .wa-bubble-row {
+        display: flex;
+        margin-bottom: 4px;
+        gap: 8px;
+    }
+    .wa-bubble-row.sent {
+        justify-content: flex-end;
+    }
+    .wa-msg-avatar {
+        width: 30px;
+        height: 30px;
+        border-radius: 50%;
+        flex-shrink: 0;
+        align-self: flex-end;
+    }
+    .wa-bubble-row.sent .wa-msg-avatar { display: none; }
+
+    /* Bubble */
+    .wa-bubble {
+        max-width: 65%;
+        padding: 8px 12px 6px;
+        border-radius: 8px 8px 8px 0;
+        background: #fff;
+        position: relative;
+        box-shadow: 0 1px 2px rgba(0,0,0,0.08);
+        word-wrap: break-word;
+        line-height: 1.45;
+        font-size: 0.93rem;
+        color: #111;
+    }
+    .wa-bubble-row.sent .wa-bubble {
+        background: #d9fdd3;
+        border-radius: 8px 8px 0 8px;
+        color: #111;
+    }
+    .wa-bubble-time {
+        float: right;
+        font-size: 0.65rem;
+        color: #999;
+        margin-left: 10px;
+        margin-top: 2px;
+        display: flex;
+        align-items: center;
+        gap: 3px;
+    }
+    .wa-bubble-row.sent .wa-bubble-time { color: #7bb57b; }
+
+    /* Double tick styles */
+    .wa-ticks { display: inline-flex; align-items: center; flex-shrink: 0; }
+    .wa-ticks svg { width: 16px; height: 11px; }
+    .wa-ticks.grey svg { color: #999; }
+    .wa-ticks.blue svg { color: #53bdeb; }
+    .wa-ticks.grey-to-blue svg {
+        color: #999;
+        transition: color 0.5s ease;
+    }
+    .wa-ticks.grey-to-blue.read svg { color: #53bdeb; }
+
+    /* Audio bubble */
+    .wa-audio-bubble {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        min-width: 200px;
+    }
+    .wa-audio-play {
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        background: #0A3D62;
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        flex-shrink: 0;
+    }
+    .wa-bubble-row.sent .wa-audio-play { background: #25D366; }
+    .wa-audio-waveform {
+        flex: 1;
+        height: 3px;
+        background: rgba(0,0,0,0.15);
+        border-radius: 2px;
+        position: relative;
+    }
+    .wa-audio-waveform::after {
+        content: '';
+        position: absolute;
+        width: 10px; height: 10px;
+        top: -3.5px; left: 0;
+        border-radius: 50%;
+        background: #999;
+    }
+    .wa-audio-dur { font-size: 0.73rem; color: #666; }
+
+    /* ── Input area ── */
+    .wa-input-bar {
+        background: #f0f2f5;
+        padding: 10px 12px;
+        display: flex;
+        align-items: flex-end;
+        gap: 10px;
+        flex-shrink: 0;
+    }
+    .wa-icon-btn {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        border: none;
+        background: transparent;
+        color: #6c757d;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        flex-shrink: 0;
+        transition: color 0.2s, background 0.2s;
+    }
+    .wa-icon-btn:hover { color: #0A3D62; background: rgba(10,61,98,0.07); }
+    .wa-icon-btn.recording { color: #e74c3c; animation: wa-pulse 1s infinite; }
+    @keyframes wa-pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.5; } }
+
+    .wa-input-wrap {
+        flex: 1;
+        background: #fff;
+        border-radius: 24px;
+        padding: 10px 18px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+    }
+    .wa-input-wrap input {
+        flex: 1;
+        border: none;
+        outline: none;
+        background: transparent;
+        color: #111;
+        font-size: 0.95rem;
+    }
+    .wa-input-wrap input::placeholder { color: #aaa; }
+
+    .wa-send-btn {
+        width: 48px;
+        height: 48px;
+        border-radius: 50%;
+        background: #25D366;
+        border: none;
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+        cursor: pointer;
+        box-shadow: 0 2px 8px rgba(37,211,102,0.4);
+        transition: background 0.2s, transform 0.1s;
+    }
+    .wa-send-btn:hover { background: #1ab559; transform: scale(1.05); }
+    .wa-send-btn:active { transform: scale(0.95); }
+
+    /* Context Menu */
+    .wa-ctx-menu {
+        position: fixed; z-index: 999; background: #fff; border-radius: 12px;
+        box-shadow: 0 6px 30px rgba(0,0,0,0.15); min-width: 180px;
+        overflow: hidden; animation: ctx-in 0.15s ease; display: none;
+    }
+    @keyframes ctx-in { from { opacity:0; transform:scale(0.92); } to { opacity:1; transform:scale(1); } }
+    .wa-ctx-item {
+        padding: 12px 18px; font-size: 0.88rem; font-weight: 600; color: #333;
+        display: flex; align-items: center; gap: 12px; cursor: pointer; transition: background 0.15s;
+    }
+    .wa-ctx-item:hover { background: #f0f4f8; }
+    .wa-ctx-item.danger { color: #e74c3c; }
+    .wa-ctx-item svg { width: 16px; height: 16px; flex-shrink: 0; }
+    .wa-ctx-divider { height: 1px; background: #eee; }
+
+    /* Reply Bar */
+    .wa-reply-bar {
+        background: #f0f4f8; border-left: 4px solid #25D366; padding: 8px 14px;
+        margin: 0 12px; border-radius: 0 8px 8px 0; display: none; align-items: center; gap: 10px;
+    }
+    .wa-reply-bar.active { display: flex; }
+    .wa-reply-preview { flex: 1; }
+    .wa-reply-name { font-size: 0.75rem; font-weight: 800; color: #25D366; }
+    .wa-reply-text { font-size: 0.82rem; color: #555; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 400px; }
+    .wa-reply-close { width: 28px; height: 28px; border-radius: 50%; border: none; background: transparent; color: #999; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+    .wa-reply-close:hover { background: rgba(0,0,0,0.06); }
+
+    /* Edit mode bar */
+    .wa-edit-bar {
+        background: #fff8e1; border-left: 4px solid #f0ad4e; padding: 8px 14px;
+        margin: 0 12px; border-radius: 0 8px 8px 0; display: none; align-items: center; gap: 10px;
+    }
+    .wa-edit-bar.active { display: flex; }
+    .wa-edit-label { font-size: 0.82rem; font-weight: 700; color: #b8860b; flex: 1; }
+
+    /* Quote inside bubble */
+    .wa-quote { background: rgba(0,0,0,0.04); border-left: 3px solid #25D366; border-radius: 4px; padding: 4px 8px; margin-bottom: 4px; font-size: 0.78rem; color: #555; }
+    .wa-quote-name { font-weight: 800; color: #25D366; font-size: 0.72rem; }
+
+    /* Edited & deleted */
+    .wa-edited-tag { font-size: 0.6rem; color: #999; font-style: italic; margin-right: 4px; }
+    .wa-deleted-msg { font-style: italic; color: #999; }
+
+    /* Hover dropdown arrow (WhatsApp Web style) */
+    .wa-bubble { position: relative; }
+    .wa-bubble-chevron {
+        position: absolute; top: 4px; right: 4px;
+        width: 24px; height: 24px; border-radius: 50%;
+        background: rgba(255,255,255,0.85); backdrop-filter: blur(4px);
+        display: none; align-items: center; justify-content: center;
+        cursor: pointer; z-index: 5; transition: background 0.15s;
+        border: none; padding: 0; color: #667;
+    }
+    .wa-bubble-chevron:hover { background: rgba(0,0,0,0.08); }
+    .wa-bubble-row:hover .wa-bubble-chevron { display: flex; }
+    .wa-bubble-row.sent .wa-bubble-chevron { background: rgba(217,253,211,0.9); }
+    .wa-bubble-row.sent .wa-bubble-chevron:hover { background: rgba(0,0,0,0.06); }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="wa-shell">
+
+    <!-- ═══ HEADER ═══ -->
+    <div class="wa-header">
+        <a href="{% url 'chat_index' %}" class="wa-back-btn">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M15 18l-6-6 6-6"/></svg>
+        </a>
+        <div class="wa-avatar-wrap">
+            <img src="https://api.dicebear.com/7.x/avataaars/svg?seed={{ target_user.username }}&backgroundColor=1e2a3b" class="wa-avatar" alt="{{ target_user.username }}">
+            <div class="wa-online-dot"></div>
+        </div>
+        <div class="wa-user-info">
+            <p class="wa-user-name">{{ target_user.get_full_name|default:target_user.username|title }}</p>
+            <p class="wa-user-status">
+                <span style="display:inline-block; width:7px; height:7px; background:#25D366; border-radius:50%; margin-right:4px;"></span>
+                Online &bull; TeleMD Secure Channel
+            </p>
+        </div>
+        <div class="wa-actions">
+            <!-- Audio Call -->
+            <a href="{% url 'video_call_room' room_name=room_name %}?audio_only=1" class="wa-action-btn" title="Audio Call">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 2.59 3.4L15.3 15.3a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>
+                </svg>
+            </a>
+            <!-- Video Call -->
+            <a href="{% url 'video_call_room' room_name=room_name %}" class="wa-action-btn video" title="Video Call">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polygon points="23 7 16 12 23 17 23 7"/>
+                    <rect x="1" y="5" width="15" height="14" rx="2" ry="2"/>
+                </svg>
+            </a>
+        </div>
+    </div>
+
+    <!-- ═══ MESSAGES ═══ -->
+    <div class="wa-messages" id="chat-log">
+
+        <div class="wa-date-sep"><span>TODAY</span></div>
+
+        <!-- Seed static messages (placeholder before real ones load) -->
+        <div class="wa-bubble-row">
+            <img src="https://api.dicebear.com/7.x/avataaars/svg?seed={{ target_user.username }}&backgroundColor=1e2a3b" class="wa-msg-avatar" alt="">
+            <div class="wa-bubble">
+                Hello! How can I help you today?
+                <div class="wa-bubble-time">08:30</div>
+            </div>
+        </div>
+
+        <!-- Real messages -->
+        {% for msg in chat_messages %}
+        <div class="wa-bubble-row {% if msg.sender == user %}sent{% endif %}" id="msg-db{{ msg.id }}" data-msgid="db{{ msg.id }}" data-text="{{ msg.content }}" data-sent="{% if msg.sender == user %}true{% else %}false{% endif %}" data-ts="0">
+            {% if msg.sender != user %}
+            <img src="https://api.dicebear.com/7.x/avataaars/svg?seed={{ msg.sender.username }}&backgroundColor=1e2a3b" class="wa-msg-avatar" alt="">
+            {% endif %}
+            <div class="wa-bubble">
+                <button class="wa-bubble-chevron" onclick="event.stopPropagation(); showCtx(event, this.closest('.wa-bubble-row'))"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg></button>
+                <span class="msg-text-content">{{ msg.content }}</span>
+                <div class="wa-bubble-time">
+                    {{ msg.timestamp|time:"H:i" }}
+                    {% if msg.sender == user %}
+                    <span class="wa-ticks blue"><svg viewBox="0 0 16 11" fill="none"><path d="M11.07 0.73L4.53 7.27L1.97 4.72L0.5 6.18L4.53 10.22L12.53 2.22L11.07 0.73Z" fill="currentColor"/><path d="M14.07 0.73L7.53 7.27L6.78 6.52L5.31 7.99L7.53 10.22L15.53 2.22L14.07 0.73Z" fill="currentColor"/></svg></span>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Context Menu -->
+    <div class="wa-ctx-menu" id="ctx-menu">
+        <div class="wa-ctx-item" onclick="ctxReply()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 14 4 9 9 4"/><path d="M20 20v-7a4 4 0 0 0-4-4H4"/></svg>Reply</div>
+        <div class="wa-ctx-item" onclick="ctxCopy()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>Copy</div>
+        <div class="wa-ctx-divider"></div>
+        <div class="wa-ctx-item" id="ctx-edit-btn" onclick="ctxEdit()" style="display:none;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>Edit</div>
+        <div class="wa-ctx-item danger" id="ctx-del-btn" onclick="ctxDelete()" style="display:none;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>Delete</div>
+    </div>
+
+    <!-- Reply Bar -->
+    <div class="wa-reply-bar" id="reply-bar">
+        <div class="wa-reply-preview">
+            <div class="wa-reply-name" id="reply-name"></div>
+            <div class="wa-reply-text" id="reply-text"></div>
+        </div>
+        <button class="wa-reply-close" onclick="cancelReply()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+    </div>
+
+    <!-- Edit Bar -->
+    <div class="wa-edit-bar" id="edit-bar">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#b8860b" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+        <span class="wa-edit-label">Editing message</span>
+        <button class="wa-reply-close" onclick="cancelEdit()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+    </div>
+
+    <!-- ═══ INPUT BAR ═══ -->
+    <div class="wa-input-bar">
+        <!-- Attach file -->
+        <input type="file" id="file-upload" style="display:none;" onchange="uploadMedia('attachment')">
+        <button class="wa-icon-btn" onclick="document.getElementById('file-upload').click()" title="Attach file">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
+        </button>
+
+        <!-- Text input -->
+        <div class="wa-input-wrap">
+            <input type="text" id="chat-message-input" placeholder="Type a message">
+        </div>
+
+        <!-- Voice note -->
+        <button class="wa-icon-btn" id="record-btn" onclick="toggleRecording()" title="Voice note">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
+        </button>
+
+        <!-- Send -->
+        <button class="wa-send-btn" id="chat-message-submit" title="Send">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="transform:translateX(1px);"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+        </button>
+    </div>
+</div>
+
+<script>
+    const roomName = "{{ room_name }}";
+    const wsScheme = window.location.protocol === "https:" ? "wss" : "ws";
+    const chatSocket = new WebSocket(`${wsScheme}://${window.location.host}/ws/chat/${roomName}/`);
+    const myId = Number("{{ user.id|default:'0' }}");
+    const mySeed = "{{ user.username }}";
+    const otherSeed = "{{ target_user.username }}";
+    const myName = "{{ user.get_full_name|default:user.username }}";
+    const otherName = "{{ target_user.get_full_name|default:target_user.username }}";
+    let msgCounter = 0;
+
+    // ── Context Menu State ──
+    let ctxTarget = null; // { el, msgId, text, isSent, timestamp }
+    let replyTo = null;   // { name, text }
+    let editState = null; // { msgId, el }
+
+    const DOUBLE_TICK = `<span class="wa-ticks grey-to-blue"><svg viewBox="0 0 16 11" fill="none"><path d="M11.07 0.73L4.53 7.27L1.97 4.72L0.5 6.18L4.53 10.22L12.53 2.22L11.07 0.73Z" fill="currentColor"/><path d="M14.07 0.73L7.53 7.27L6.78 6.52L5.31 7.99L7.53 10.22L15.53 2.22L14.07 0.73Z" fill="currentColor"/></svg></span>`;
+    const BLUE_TICK = `<span class="wa-ticks blue"><svg viewBox="0 0 16 11" fill="none"><path d="M11.07 0.73L4.53 7.27L1.97 4.72L0.5 6.18L4.53 10.22L12.53 2.22L11.07 0.73Z" fill="currentColor"/><path d="M14.07 0.73L7.53 7.27L6.78 6.52L5.31 7.99L7.53 10.22L15.53 2.22L14.07 0.73Z" fill="currentColor"/></svg></span>`;
+
+    // ── Build a message bubble HTML ──
+    function buildBubble(text, isSent, time, msgId, replyQuote, isEdited) {
+        const avatarHtml = isSent ? '' : `<img src="https://api.dicebear.com/7.x/avataaars/svg?seed=${otherSeed}&backgroundColor=1e2a3b" class="wa-msg-avatar" alt="">`;
+        const tickHtml = isSent ? DOUBLE_TICK : '';
+        const editedHtml = isEdited ? '<span class="wa-edited-tag">edited</span>' : '';
+        const quoteHtml = replyQuote ? `<div class="wa-quote"><div class="wa-quote-name">${replyQuote.name}</div>${replyQuote.text}</div>` : '';
+        const chevron = `<button class="wa-bubble-chevron" onclick="event.stopPropagation(); showCtx(event, this.closest('.wa-bubble-row'))"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg></button>`;
+        return `
+            <div class="wa-bubble-row ${isSent ? 'sent' : ''}" id="msg-${msgId}" data-msgid="${msgId}" data-text="${text.replace(/"/g, '&quot;')}" data-sent="${isSent}" data-ts="${Date.now()}" oncontextmenu="showCtx(event, this)" ontouchstart="startLongPress(event, this)" ontouchend="clearLongPress()">
+                ${avatarHtml}
+                <div class="wa-bubble">
+                    ${chevron}
+                    ${quoteHtml}
+                    <span class="msg-text-content">${text}</span>
+                    <div class="wa-bubble-time">${editedHtml}${time} ${tickHtml}</div>
+                </div>
+            </div>`;
+    }
+
+    // ── WebSocket Message Handler ──
+    chatSocket.onmessage = function(e) {
+        const data = JSON.parse(e.data);
+        const log = document.getElementById('chat-log');
+
+        // Read receipts
+        if (data.action === 'read_receipt' && data.reader_id !== myId) {
+            document.querySelectorAll('.wa-ticks.grey-to-blue').forEach(el => el.classList.add('read'));
+            return;
+        }
+
+        // Edit message
+        if (data.action === 'edit_message') {
+            const el = document.getElementById('msg-' + data.msg_id);
+            if (el) {
+                const textEl = el.querySelector('.msg-text-content');
+                if (textEl) textEl.textContent = data.new_text;
+                el.setAttribute('data-text', data.new_text);
+                // Add edited tag if not present
+                const timeDiv = el.querySelector('.wa-bubble-time');
+                if (timeDiv && !timeDiv.querySelector('.wa-edited-tag')) {
+                    timeDiv.insertAdjacentHTML('afterbegin', '<span class="wa-edited-tag">edited</span>');
+                }
+            }
+            return;
+        }
+
+        // Delete message
+        if (data.action === 'delete_message') {
+            const el = document.getElementById('msg-' + data.msg_id);
+            if (el) {
+                const textEl = el.querySelector('.msg-text-content');
+                if (textEl) {
+                    textEl.innerHTML = '<span class="wa-deleted-msg">🚫 This message was deleted</span>';
+                }
+                // Remove quote if any
+                const quote = el.querySelector('.wa-quote');
+                if (quote) quote.remove();
+                el.removeAttribute('data-text');
+            }
+            return;
+        }
+
+        const isSent = data.sender_id === myId;
+
+        if (data.action === 'text') {
+            msgCounter++;
+            const msgId = 'rt_' + msgCounter + '_' + Date.now();
+            let replyQuote = null;
+            if (data.reply_to) {
+                replyQuote = { name: data.reply_to.name, text: data.reply_to.text };
+            }
+            const html = buildBubble(data.message, isSent, 'Now', msgId, replyQuote, false);
+            log.insertAdjacentHTML('beforeend', html);
+            if (!isSent) {
+                chatSocket.send(JSON.stringify({ action: 'read_receipt', sender_id: myId }));
+            }
+        } else if (data.action === 'media') {
+            // Keep existing media handling simple
+            let contentHtml = '';
+            if (data.attachment_url) {
+                if(data.attachment_url.match(/\.(jpeg|jpg|gif|png)$/i)) {
+                    contentHtml = `<img src="${data.attachment_url}" style="max-width:100%;border-radius:8px;"><div class="wa-bubble-time">Now</div>`;
+                } else {
+                    contentHtml = `<a href="${data.attachment_url}" target="_blank" style="color:inherit;font-weight:700;">📎 Attached File</a><div class="wa-bubble-time">Now</div>`;
+                }
+            } else if (data.audio_url) {
+                contentHtml = `<div class="wa-audio-bubble"><div class="wa-audio-play"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></div><div class="wa-audio-waveform"></div><div class="wa-audio-dur">Voice Note</div></div><div class="wa-bubble-time mt-1">Now</div>`;
+            }
+            const avatarHtml = isSent ? '' : `<img src="https://api.dicebear.com/7.x/avataaars/svg?seed=${otherSeed}&backgroundColor=1e2a3b" class="wa-msg-avatar" alt="">`;
+            log.insertAdjacentHTML('beforeend', `<div class="wa-bubble-row ${isSent ? 'sent' : ''}">${avatarHtml}<div class="wa-bubble">${contentHtml}</div></div>`);
+        }
+
+        log.scrollTop = log.scrollHeight;
+    };
+
+    // ── Send / Edit Message ──
+    document.getElementById('chat-message-input').addEventListener('keyup', function(e) {
+        if (e.key === 'Enter') document.getElementById('chat-message-submit').click();
+    });
+
+    document.getElementById('chat-message-submit').onclick = function() {
+        const inp = document.getElementById('chat-message-input');
+        const msg = inp.value.trim();
+        if (!msg) return;
+
+        // EDIT MODE
+        if (editState) {
+            chatSocket.send(JSON.stringify({
+                action: 'edit_message',
+                msg_id: editState.msgId,
+                new_text: msg,
+                sender_id: myId
+            }));
+            cancelEdit();
+            inp.value = '';
+            return;
+        }
+
+        // NORMAL / REPLY MODE
+        const payload = {
+            action: 'text',
+            message: msg,
+            sender_id: myId,
+            receiver_id: Number("{{ target_user.id|default:'0' }}")
+        };
+        if (replyTo) {
+            payload.reply_to = { name: replyTo.name, text: replyTo.text };
+            cancelReply();
+        }
+        chatSocket.send(JSON.stringify(payload));
+        inp.value = '';
+    };
+
+    // ── Context Menu ──
+    let longPressTimer = null;
+
+    function showCtx(e, bubbleRow) {
+        e.preventDefault();
+        ctxTarget = {
+            el: bubbleRow,
+            msgId: bubbleRow.getAttribute('data-msgid'),
+            text: bubbleRow.getAttribute('data-text'),
+            isSent: bubbleRow.getAttribute('data-sent') === 'true',
+            timestamp: parseInt(bubbleRow.getAttribute('data-ts') || '0')
+        };
+
+        const menu = document.getElementById('ctx-menu');
+        const editBtn = document.getElementById('ctx-edit-btn');
+        const delBtn = document.getElementById('ctx-del-btn');
+
+        // Show edit only for own messages within 50 seconds
+        const elapsed = (Date.now() - ctxTarget.timestamp) / 1000;
+        if (ctxTarget.isSent && ctxTarget.text && elapsed <= 50) {
+            editBtn.style.display = 'flex';
+        } else {
+            editBtn.style.display = 'none';
+        }
+
+        // Show delete only for own messages
+        delBtn.style.display = ctxTarget.isSent && ctxTarget.text ? 'flex' : 'none';
+
+        // Position menu
+        let x = e.clientX || e.touches?.[0]?.clientX || 200;
+        let y = e.clientY || e.touches?.[0]?.clientY || 200;
+        menu.style.display = 'block';
+        // Prevent going off-screen
+        const mw = menu.offsetWidth, mh = menu.offsetHeight;
+        if (x + mw > window.innerWidth) x = window.innerWidth - mw - 10;
+        if (y + mh > window.innerHeight) y = window.innerHeight - mh - 10;
+        menu.style.left = x + 'px';
+        menu.style.top = y + 'px';
+    }
+
+    function hideCtx() {
+        document.getElementById('ctx-menu').style.display = 'none';
+        ctxTarget = null;
+    }
+    document.addEventListener('click', hideCtx);
+
+    // Long press for mobile
+    function startLongPress(e, el) {
+        longPressTimer = setTimeout(() => showCtx(e, el), 500);
+    }
+    function clearLongPress() {
+        if (longPressTimer) clearTimeout(longPressTimer);
+    }
+
+    // ── Copy ──
+    function ctxCopy() {
+        if (ctxTarget?.text) {
+            navigator.clipboard.writeText(ctxTarget.text).catch(() => {});
+        }
+        hideCtx();
+    }
+
+    // ── Reply ──
+    function ctxReply() {
+        if (!ctxTarget) return;
+        replyTo = {
+            name: ctxTarget.isSent ? myName : otherName,
+            text: ctxTarget.text || ''
+        };
+        document.getElementById('reply-name').textContent = replyTo.name;
+        document.getElementById('reply-text').textContent = replyTo.text;
+        document.getElementById('reply-bar').classList.add('active');
+        document.getElementById('chat-message-input').focus();
+        hideCtx();
+    }
+    function cancelReply() {
+        replyTo = null;
+        document.getElementById('reply-bar').classList.remove('active');
+    }
+
+    // ── Edit ──
+    function ctxEdit() {
+        if (!ctxTarget || !ctxTarget.isSent) return;
+        editState = { msgId: ctxTarget.msgId, el: ctxTarget.el };
+        document.getElementById('edit-bar').classList.add('active');
+        const inp = document.getElementById('chat-message-input');
+        inp.value = ctxTarget.text;
+        inp.focus();
+        hideCtx();
+    }
+    function cancelEdit() {
+        editState = null;
+        document.getElementById('edit-bar').classList.remove('active');
+        document.getElementById('chat-message-input').value = '';
+    }
+
+    // ── Delete ──
+    function ctxDelete() {
+        if (!ctxTarget || !ctxTarget.isSent) return;
+        chatSocket.send(JSON.stringify({
+            action: 'delete_message',
+            msg_id: ctxTarget.msgId,
+            sender_id: myId
+        }));
+        hideCtx();
+    }
+
+    // ── File Upload ──
+    async function uploadMedia(type, fileObj = null) {
+        let file = fileObj;
+        if (!file && type === 'attachment') {
+            const inp = document.getElementById('file-upload');
+            if (!inp.files.length) return;
+            file = inp.files[0];
+        }
+        const fd = new FormData();
+        fd.append('receiver_id', "{{ target_user.id|default:'0' }}");
+        fd.append(type, file);
+        try {
+            const res = await fetch("{% url 'upload_chat_attachment' %}", { method: 'POST', body: fd });
+            const data = await res.json();
+            if (data.status === 'success') {
+                chatSocket.send(JSON.stringify({
+                    action: 'media',
+                    sender_id: myId,
+                    attachment_url: data.attachment_url,
+                    audio_url: data.audio_url
+                }));
+            }
+        } catch(e) { console.error('Upload failed', e); }
+        if (type === 'attachment') document.getElementById('file-upload').value = '';
+    }
+
+    // ── Voice Recording ──
+    let mediaRecorder, audioChunks = [], isRecording = false;
+    async function toggleRecording() {
+        const btn = document.getElementById('record-btn');
+        if (!isRecording) {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                mediaRecorder = new MediaRecorder(stream);
+                audioChunks = [];
+                mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
+                mediaRecorder.onstop = () => {
+                    const blob = new Blob(audioChunks, { type: 'audio/webm' });
+                    const file = new File([blob], `voice_${Date.now()}.webm`, { type: 'audio/webm' });
+                    stream.getTracks().forEach(t => t.stop());
+                    uploadMedia('audio_note', file);
+                };
+                mediaRecorder.start();
+                isRecording = true;
+                btn.classList.add('recording');
+            } catch(e) { alert('Microphone access denied.'); }
+        } else {
+            mediaRecorder.stop();
+            isRecording = false;
+            btn.classList.remove('recording');
+        }
+    }
+
+    // Scroll to bottom on load
+    const log = document.getElementById('chat-log');
+    log.scrollTop = log.scrollHeight;
+</script>
+{% endblock %}

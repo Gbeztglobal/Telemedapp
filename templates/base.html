@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}TeleMD - Clinical Ecosystem{% endblock %}</title>
+    
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="/static/css/styles.css">
+    
+    {% block extra_css %}{% endblock %}
+    <style>
+        .incoming-call-overlay {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 100%;
+            max-width: 600px;
+            z-index: 9999;
+            animation: slideDown 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+        }
+        .call-banner {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            border: 2px solid #27ae60;
+        }
+        @keyframes slideDown {
+            from { top: -100px; opacity: 0; }
+            to { top: 20px; opacity: 1; }
+        }
+        .caller-pulse {
+            animation: pulse-ring 1.5s infinite;
+        }
+        @keyframes pulse-ring {
+            0% { box-shadow: 0 0 0 0 rgba(39, 174, 96, 0.7); }
+            70% { box-shadow: 0 0 0 15px rgba(39, 174, 96, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(39, 174, 96, 0); }
+        }
+    </style>
+</head>
+<body class="{% block body_class %}{% endblock %}">
+
+    <!-- Main Navigation -->
+    <nav class="navbar navbar-expand-lg navbar-dark sticky-top {% block nav_class %}{% endblock %}" style="background-color: #0A3D62 !important; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
+        <div class="container">
+            <a class="navbar-brand d-flex align-items-center gap-2 fw-bold" href="#" style="letter-spacing: 0.5px;">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><path d="M20.42 4.58a5.4 5.4 0 0 0-7.65 0l-.77.78-.77-.78a5.4 5.4 0 0 0-7.65 0C1.46 6.7 1.33 10.28 4 13l8 8 8-8c2.67-2.72 2.54-6.3.42-8.42z"/><polyline points="7 12 10 12 12 7 15 16 17 12 20 12"/></svg>
+                TeleMD
+            </a>
+            {% if user.is_authenticated %}
+            <!-- Mobile notification bell (always visible) -->
+            <div class="d-flex align-items-center d-lg-none ms-auto me-2">
+                <div class="dropdown position-relative">
+                    <a class="nav-link text-white p-1" href="#" id="notifyDropdownMobile" role="button" data-bs-toggle="dropdown" aria-expanded="false" onclick="openNotifications()">
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>
+                        <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger notification-badge-mirror" style="font-size:0.6rem;">0</span>
+                    </a>
+                    <ul class="dropdown-menu dropdown-menu-end shadow border-0 p-0" aria-labelledby="notifyDropdownMobile" style="width: 300px; border-radius: 12px; overflow: hidden;" id="notification-list-mobile">
+                        <li class="p-3 text-center text-muted small"><div class="spinner-border spinner-border-sm" role="status"></div> Loading...</li>
+                    </ul>
+                </div>
+            </div>
+            {% endif %}
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#mainNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            
+            <div class="collapse navbar-collapse" id="mainNav">
+                <ul class="navbar-nav ms-auto mb-2 mb-lg-0">
+                    {% if user.is_authenticated %}
+                        <li class="nav-item d-flex align-items-center">
+                            <a class="nav-link text-white fw-bold me-3" href="{% url 'dashboard_router' %}">Dashboard</a>
+                        </li>
+                        {% if user.role == 'PATIENT' %}
+                        <li class="nav-item d-flex align-items-center">
+                            <a class="nav-link text-white me-3" href="{% url 'book_appointment' %}">Find Doctors</a>
+                        </li>
+                        {% endif %}
+                        <li class="nav-item d-flex align-items-center">
+                            <a class="nav-link text-white me-3" href="{% url 'chat_index' %}">Messages</a>
+                        </li>
+                        <!-- Desktop notification bell (hidden on mobile) -->
+                        <li class="nav-item dropdown d-none d-lg-flex align-items-center me-4 position-relative">
+                            <a class="nav-link text-white" href="#" id="notifyDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false" onclick="openNotifications()">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" opacity="0.8"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>
+                                <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" id="notification-badge" style="font-size:0.6rem; margin-left: -5px; margin-top: 5px;">0</span>
+                            </a>
+                            <ul class="dropdown-menu dropdown-menu-end shadow border-0 p-0" aria-labelledby="notifyDropdown" style="width: 320px; border-radius: 12px; overflow: hidden;" id="notification-list">
+                                <li class="p-3 text-center text-muted small"><div class="spinner-border spinner-border-sm" role="status"></div> Loading...</li>
+                            </ul>
+                        </li>
+                        <li class="nav-item d-flex align-items-center dropdown">
+                            <a class="nav-link dropdown-toggle text-white d-flex align-items-center gap-2" href="#" id="userDropdown" role="button" data-bs-toggle="dropdown">
+                                <img src="{% if user.role == 'DOCTOR' %}{{ user.doctor_profile.get_avatar_url }}{% else %}{{ user.patient_profile.get_avatar_url }}{% endif %}" alt="User" class="rounded-circle bg-white" width="30" height="30">
+                                <span class="text-uppercase fw-bold opacity-75 small">{{ user.username }}</span>
+                            </a>
+                            <ul class="dropdown-menu dropdown-menu-end shadow border-0">
+                                <li><a class="dropdown-item text-danger" href="{% url 'logout' %}">Logout</a></li>
+                            </ul>
+                        </li>
+                    {% else %}
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'login' %}">Login</a>
+                        </li>
+                        <li class="nav-item ms-2">
+                            <a class="btn bg-white text-dark rounded-pill px-4 fw-bold" href="{% url 'register' %}">Register</a>
+                        </li>
+                    {% endif %}
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Content Block -->
+    <div class="container mt-4 mb-5">
+        {% block content %}{% endblock %}
+    </div>
+
+    <!-- Global Toast Container -->
+    <div class="toast-container position-fixed bottom-0 end-0 p-3" id="toast-container" style="z-index: 1060;"></div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    {% if user.is_authenticated %}
+    <script>
+        // Fetch Initial logic attached inside window
+        async function fetchNotifications() {
+            try {
+                const res = await fetch('/notifications/api/list/');
+                const data = await res.json();
+                const list = document.getElementById('notification-list');
+                const listMobile = document.getElementById('notification-list-mobile');
+                const badge = document.getElementById('notification-badge');
+                const badgeMirrors = document.querySelectorAll('.notification-badge-mirror');
+                
+                if (data.unreads > 0) {
+                    badge.innerText = data.unreads;
+                    badge.style.display = 'inline-block';
+                    badgeMirrors.forEach(b => { b.innerText = data.unreads; b.style.display = 'inline-block'; });
+                } else {
+                    badge.style.display = 'none';
+                    badgeMirrors.forEach(b => b.style.display = 'none');
+                }
+                
+                const notifHtml = data.notifications.length === 0
+                    ? '<li class="p-3 text-center text-muted small">No new notifications.</li>'
+                    : data.notifications.map((n, i) => `
+                        <li id="notif-item-${i}"><a class="dropdown-item p-3 border-bottom d-flex flex-column" href="#" data-url="${n.action_link || ''}" onclick="clearNotifItem(event, 'notif-item-${i}', this)">
+                            <span class="fw-bold" style="font-size: 0.85rem; color: #0A3D62;">${n.type}</span>
+                            <span class="text-wrap" style="font-size: 0.85rem;">${n.message}</span>
+                            <span class="text-muted mt-1" style="font-size: 0.7rem;">Just now</span>
+                        </a></li>
+                    `).join('');
+                
+                if (list) list.innerHTML = notifHtml;
+                if (listMobile) listMobile.innerHTML = notifHtml;
+            } catch(e) { console.error('Error fetching notifications:', e); }
+        }
+
+        async function openNotifications() {
+            const badge = document.getElementById('notification-badge');
+            const badgeMirrors = document.querySelectorAll('.notification-badge-mirror');
+            if (badge.style.display !== 'none' && badge.innerText !== '') {
+                badge.style.display = 'none';
+                badge.innerText = '';
+                badgeMirrors.forEach(b => { b.style.display = 'none'; b.innerText = ''; });
+                try {
+                    await fetch('/notifications/api/mark-read/', { method: 'POST' });
+                } catch(e) {}
+            }
+        }
+
+        async function clearNotifItem(event, itemId, linkEl) {
+            event.preventDefault();
+            event.stopPropagation();
+
+            // Remove the clicked notification from DOM immediately
+            const item = document.getElementById(itemId);
+            if (item) item.remove();
+
+            // Decrement badge
+            const badge = document.getElementById('notification-badge');
+            let count = parseInt(badge.innerText || '0') - 1;
+            if (count <= 0) {
+                badge.style.display = 'none';
+                badge.innerText = '';
+            } else {
+                badge.innerText = count;
+            }
+
+            // If no items left, show empty state
+            const list = document.getElementById('notification-list');
+            if (!list.querySelector('li')) {
+                list.innerHTML = '<li class="p-3 text-center text-muted small">No new notifications.</li>';
+            }
+
+            // Mark as read and WAIT for it to finish before navigating
+            try { await fetch('/notifications/api/mark-read/', { method: 'POST' }); } catch(e) {}
+
+            // Navigate to the link destination
+            const url = linkEl.getAttribute('data-url');
+            if (url && url !== '') {
+                window.location.href = url;
+            }
+        }
+
+        // Run once on load to populate badge
+        fetchNotifications();
+
+        const notifyScheme = window.location.protocol === "https:" ? "wss" : "ws";
+        const notifySocket = new WebSocket(`${notifyScheme}://${window.location.host}/ws/notifications/`);
+        
+        notifySocket.onmessage = function(e) {
+            const data = JSON.parse(e.data);
+            
+            if (data.action === "INCOMING_CALL") {
+                const modalId = 'callModal' + Date.now();
+                const modalEl = document.createElement('div');
+                modalEl.className = 'incoming-call-overlay';
+                modalEl.id = modalId;
+                modalEl.innerHTML = `
+                    <div class="call-banner shadow-lg">
+                        <div class="d-flex align-items-center justify-content-between p-4">
+                            <div class="d-flex align-items-center gap-3">
+                                <div class="bg-success rounded-circle d-flex align-items-center justify-content-center caller-pulse" style="width:50px; height:50px; color:white;">
+                                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 2.59 3.4L15.3 15.3a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+                                </div>
+                                <div>
+                                    <h5 class="mb-0 fw-bold text-dark">Incoming Call...</h5>
+                                    <p class="text-muted mb-0">From: ${data.caller_name}</p>
+                                </div>
+                            </div>
+                            <div class="d-flex gap-2">
+                                <button class="btn btn-danger rounded-pill px-4" onclick="document.getElementById('${modalId}').remove(); document.getElementById('ringtone-${modalId}').pause();">Decline</button>
+                                <a href="${data.room_url}" class="btn btn-success fw-bold rounded-pill px-4 text-white text-decoration-none d-flex align-items-center gap-2">
+                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
+                                    Accept Call
+                                </a>
+                            </div>
+                        </div>
+                        <audio id="ringtone-${modalId}" loop autoplay playsinline>
+                            <source src="https://www.soundjay.com/phone/telephone-ring-03a.mp3" type="audio/mpeg">
+                        </audio>
+                    </div>
+                `;
+                document.body.appendChild(modalEl);
+                // Auto dismiss after 30s
+                setTimeout(() => {
+                    const activeModal = document.getElementById(modalId);
+                    if(activeModal) activeModal.remove();
+                }, 30000);
+            } else {
+                // Standard Pop Toast
+                const toastId = 'toast' + Date.now();
+                const toastEl = document.createElement('div');
+                toastEl.className = 'toast align-items-center text-white border-0';
+                toastEl.style.background = '#0A3D62'; 
+                toastEl.setAttribute('role', 'alert');
+                toastEl.setAttribute('id', toastId);
+                toastEl.innerHTML = `
+                  <div class="d-flex">
+                    <div class="toast-body d-flex flex-column">
+                      <strong class="me-auto text-warning">${data.type || 'NEW NOTIFICATION'}</strong>
+                      <span>${data.message}</span>
+                    </div>
+                    <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+                  </div>
+                `;
+                document.getElementById('toast-container').appendChild(toastEl);
+                const bt = new bootstrap.Toast(toastEl, { delay: 5000 });
+                bt.show();
+    
+                fetchNotifications(); // Refresh list & badge
+            }
+        };
+    </script>
+    {% endif %}
+    {% block extra_js %}{% endblock %}
+</body>
+</html>
