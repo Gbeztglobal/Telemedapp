@@ -313,14 +313,7 @@
             <span id="status-text">Handshake active...</span>
         </div>
 
-        <div class="vc-overlay" id="start-screen">
-            <h3>Secure Video Session</h3>
-            <p>End-to-end encrypted protocol. Click below to securely authorize your camera and microphone.</p>
-            <button class="btn-start-call" id="btn-start">
-                <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5" style="vertical-align:-4px; margin-right: 8px" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-                Join Consultation
-            </button>
-        </div>
+        <!-- Start screen removed so call can start automatically -->
 
         <div class="vc-overlay" id="waiting-screen" style="display:none;">
             <div class="elegant-spinner"></div>
@@ -381,15 +374,13 @@
     
     const localVideo = document.getElementById('localVideo');
     const remoteVideo = document.getElementById('remoteVideo');
-    const startScreen = document.getElementById('start-screen');
     const waitingScreen = document.getElementById('waiting-screen');
     const connStatus = document.getElementById('conn-status');
 
     let isMicOn = true;
     let isCamOn = true;
 
-    document.getElementById('btn-start').addEventListener('click', async () => {
-        startScreen.style.display = 'none';
+    window.addEventListener('DOMContentLoaded', async () => {
         waitingScreen.style.display = 'flex';
         
         try {
