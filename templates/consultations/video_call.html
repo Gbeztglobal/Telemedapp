@@ -227,83 +227,84 @@
   let socket, peerConn;
   let localStream = null;
   let remoteStream = new MediaStream();
-  let iceQueue = [];
+    let iceQueue = [];
+    let initialNegotiationDone = false;
 
-  // Robust initialization triggered by User Interaction (fixes Mobile iOS AutoPlay blocks)
-  document.getElementById('btn-start-call').addEventListener('click', async function() {
-    this.parentElement.style.display = 'none';
-    waitingOverlay.style.display = 'flex';
-    document.getElementById('enc-pill').style.display = 'flex';
-    document.getElementById('local-pip').style.display = 'block';
-    document.getElementById('call-controls').style.display = 'flex';
-    if(document.getElementById('vc-hud')) {
-      document.getElementById('vc-hud').style.display = 'flex';
-      if(window.innerWidth <= 991) document.getElementById('vc-hud').classList.add('hud-collapsed');
-    }
+    // Robust initialization triggered by User Interaction (fixes Mobile iOS AutoPlay blocks)
+    document.getElementById('btn-start-call').addEventListener('click', async function() {
+        this.parentElement.style.display = 'none';
+        waitingOverlay.style.display = 'flex';
+        document.getElementById('enc-pill').style.display = 'flex';
+        document.getElementById('local-pip').style.display = 'block';
+        document.getElementById('call-controls').style.display = 'flex';
+        if(document.getElementById('vc-hud')) {
+            document.getElementById('vc-hud').style.display = 'flex';
+            if(window.innerWidth <= 991) document.getElementById('vc-hud').classList.add('hud-collapsed');
+        }
 
-    const opts = { audio: true, video: isAudioOnly ? false : { width: {ideal:640}, height: {ideal:480}, facingMode: 'user' } };
-    try {
-      localStream = await navigator.mediaDevices.getUserMedia(opts);
-    } catch(e) {
-      console.warn("Falling back to audio-only", e);
-      localStream = await navigator.mediaDevices.getUserMedia({audio:true, video:false});
-    }
-    localVideo.srcObject = localStream;
-    localVideo.play().catch(console.error);
+        const opts = { audio: true, video: isAudioOnly ? false : { width: {ideal:640}, height: {ideal:480}, facingMode: 'user' } };
+        try {
+            localStream = await navigator.mediaDevices.getUserMedia(opts);
+        } catch(e) {
+            console.warn("Falling back to audio-only", e);
+            localStream = await navigator.mediaDevices.getUserMedia({audio:true, video:false});
+        }
+        localVideo.srcObject = localStream;
+        localVideo.play().catch(console.error);
 
-    initWebSocket();
-  });
+        initWebSocket();
+    });
 
-  function initWebSocket() {
-    const wsScheme = location.protocol === 'https:' ? 'wss' : 'ws';
-    socket = new WebSocket(`${wsScheme}://${location.host}/ws/call/${roomName}/`);
-    
-    socket.onmessage = async ({ data }) => {
-      const msg = JSON.parse(data);
-      switch(msg.action) {
-        case 'waiting_for_peer':
-          setStatus('Waiting for peer...');
-          break;
-        case 'make_offer':
-          // Standard WebRTC trickle initialization
-          if(!peerConn) createPeerConnection();
-          try {
-            const offer = await peerConn.createOffer();
-            await peerConn.setLocalDescription(offer);
-            socket.send(JSON.stringify({action: 'new-offer', offer: peerConn.localDescription}));
-          } catch(e) { console.error(e); }
-          break;
-        case 'peer_joined':
-          setStatus('Peer joined...');
-          break;
-        case 'new-offer':
-          if(!peerConn) createPeerConnection();
-          try {
-            await peerConn.setRemoteDescription(new RTCSessionDescription(msg.offer));
-            flushIceQueue();
-            const answer = await peerConn.createAnswer();
-            await peerConn.setLocalDescription(answer);
-            socket.send(JSON.stringify({action: 'new-answer', answer: peerConn.localDescription}));
-          } catch(e) { console.error(e); }
-          break;
-        case 'new-answer':
-          if(peerConn) {
-            await peerConn.setRemoteDescription(new RTCSessionDescription(msg.answer));
-            flushIceQueue();
-          }
-          break;
-        case 'new-ice-candidate':
-          if(peerConn && peerConn.remoteDescription) {
-            peerConn.addIceCandidate(new RTCIceCandidate(msg.candidate)).catch(console.error);
-          } else {
-            iceQueue.push(msg.candidate);
-          }
-          break;
-        case 'peer_left':
-          setStatus('Peer disconnected');
-          waitingOverlay.style.display = 'flex';
-          remoteVideo.srcObject = null;
-          break;
+    function initWebSocket() {
+        const wsScheme = location.protocol === 'https:' ? 'wss' : 'ws';
+        socket = new WebSocket(`${wsScheme}://${location.host}/ws/call/${roomName}/`);
+
+        socket.onmessage = async ({ data }) => {
+            const msg = JSON.parse(data);
+            switch(msg.action) {
+                case 'waiting_for_peer':
+                    setStatus('Waiting for peer...');
+                    break;
+                case 'make_offer':
+                    // Standard WebRTC trickle initialization
+                    if(!peerConn) createPeerConnection();
+                    try {
+                        const offer = await peerConn.createOffer();
+                        await peerConn.setLocalDescription(offer);
+                        socket.send(JSON.stringify({action: 'new-offer', offer: peerConn.localDescription}));
+                    } catch(e) { console.error(e); }
+                    break;
+                case 'peer_joined':
+                    setStatus('Peer joined...');
+                    break;
+                case 'new-offer':
+                    if(!peerConn) createPeerConnection();
+                    try {
+                        await peerConn.setRemoteDescription(new RTCSessionDescription(msg.offer));
+                        flushIceQueue();
+                        const answer = await peerConn.createAnswer();
+                        await peerConn.setLocalDescription(answer);
+                        socket.send(JSON.stringify({action: 'new-answer', answer: peerConn.localDescription}));
+                    } catch(e) { console.error(e); }
+                    break;
+                case 'new-answer':
+                    if(peerConn) {
+                        await peerConn.setRemoteDescription(new RTCSessionDescription(msg.answer));
+                        flushIceQueue();
+                    }
+                    break;
+                case 'new-ice-candidate':
+                    if(peerConn && peerConn.remoteDescription) {
+                        peerConn.addIceCandidate(new RTCIceCandidate(msg.candidate)).catch(console.error);
+                    } else {
+                        iceQueue.push(msg.candidate);
+                    }
+                    break;
+                case 'peer_left':
+                    setStatus('Peer disconnected');
+                    waitingOverlay.style.display = 'flex';
+                    remoteVideo.srcObject = null;
+                    break;
         case 'set-filter':
           remoteVideo.style.filter = msg.filter;
           break;
@@ -354,6 +355,11 @@
 
     // The single, correct way to handle renegotiation natively
     peerConn.onnegotiationneeded = async () => {
+      // The first time tracks are added, we ignore the event because we orchestrate the initial offer-answer manually
+      if(!initialNegotiationDone) {
+          initialNegotiationDone = true;
+          return;
+      }
       try {
         const offer = await peerConn.createOffer();
         await peerConn.setLocalDescription(offer);
