@@ -21,6 +21,15 @@ services:
       - key: DEBUG
         value: "False"
 
+      - key: DJANGO_SUPERUSER_USERNAME
+        value: "admin"
+
+      - key: DJANGO_SUPERUSER_EMAIL
+        value: "admin@telemed.com"
+
+      - key: DJANGO_SUPERUSER_PASSWORD
+        value: "TeleMed2026!"
+
       - key: WEB_CONCURRENCY
         value: "4"
 
