@@ -1,697 +1,613 @@
 {% extends 'base.html' %}
-{% block title %}{% if is_audio_only %}Audio{% else %}Video{% endif %} Call - TeleMD{% endblock %}
-{% block body_class %}call-page{% endblock %}
+{% block title %}Video Consultation - TeleMD{% endblock %}
+{% block body_class %}vc-page-bg{% endblock %}
 {% block nav_class %}solid-nav{% endblock %}
 
 {% block extra_css %}
 <style>
-    /* ── Full-screen call shell ── */
-    body.call-page {
-        background: #1c1c1e;
+    .vc-page-bg {
+        background: #f0f2f5 !important;
+    }
+
+    /* ── Two-column layout ── */
+    .vc-layout {
+        display: grid;
+        grid-template-columns: 1fr 340px;
+        gap: 20px;
+        margin-top: 20px;
+        margin-bottom: 40px;
+        align-items: start;
+    }
+    /* Patients see only the video — no HUD column */
+    .vc-layout.patient-view {
+        grid-template-columns: 1fr;
+        max-width: 860px;
+        margin-left: auto;
+        margin-right: auto;
+    }
+    @media (max-width: 991px) {
+        .vc-layout { grid-template-columns: 1fr; }
+    }
+
+    /* ══════════════════════════════════════
+       VIDEO CARD
+    ══════════════════════════════════════ */
+    .vc-card {
+        background: #1a1a1a;
+        border-radius: 16px;
+        height: 72vh;
+        min-height: 420px;
+        position: relative;
         overflow: hidden;
-    }
-    body.call-page .navbar { display: none !important; }
-    body.call-page > .container { display: none !important; }
-
-    .call-shell {
-        position: fixed;
-        inset: 0;
-        display: flex;
-        flex-direction: column;
-        background: #1c1c1e;
-        z-index: 9999;
-        user-select: none;
+        box-shadow: 0 8px 32px rgba(0,0,0,0.22);
     }
 
-    /* ── Remote video (main view) ── */
+    /* Remote video fills the card */
     #remoteVideo {
-        position: absolute;
-        inset: 0;
         width: 100%;
         height: 100%;
         object-fit: cover;
-        background: #1c1c1e;
-        z-index: 1;
+        display: block;
+        background: #1a1a1a;
     }
 
-    /* ── Overlay gradient for readability ── */
-    .call-overlay {
+    /* ── Waiting overlay ── */
+    .vc-waiting {
         position: absolute;
         inset: 0;
-        background: linear-gradient(
-            to bottom,
-            rgba(0,0,0,0.45) 0%,
-            transparent 30%,
-            transparent 65%,
-            rgba(0,0,0,0.7) 100%
-        );
-        z-index: 2;
-        pointer-events: none;
-    }
-
-    /* ── Top bar ── */
-    .call-top-bar {
-        position: absolute;
-        top: 0; left: 0; right: 0;
-        padding: 20px 20px 0;
-        z-index: 10;
+        background: rgba(20,20,30,0.88);
         display: flex;
-        align-items: flex-start;
-        justify-content: space-between;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 14px;
+        z-index: 15;
+        color: #fff;
     }
-    .call-peer-info { display: flex; align-items: center; gap: 12px; }
-    .call-peer-avatar {
-        width: 46px; height: 46px;
+    .vc-waiting-avatar {
+        width: 88px; height: 88px;
         border-radius: 50%;
-        border: 2px solid rgba(255,255,255,0.4);
+        border: 3px solid rgba(0,168,150,0.5);
         object-fit: cover;
+        background: #374151;
+        animation: ring-pulse 2s infinite;
     }
-    .call-peer-name {
-        color: #fff;
-        font-size: 1.1rem;
-        font-weight: 700;
-        text-shadow: 0 1px 4px rgba(0,0,0,0.5);
-        margin: 0;
+    @keyframes ring-pulse {
+        0%,100% { box-shadow: 0 0 0 0 rgba(0,168,150,0.4); }
+        50% { box-shadow: 0 0 0 16px rgba(0,168,150,0); }
     }
-    .call-status {
-        color: rgba(255,255,255,0.8);
-        font-size: 0.78rem;
-        margin: 2px 0 0;
-        display: flex; align-items: center; gap: 6px;
+    .vc-waiting-name { font-size: 1.05rem; font-weight: 700; }
+    .vc-waiting-sub { font-size: 0.8rem; color: #9ca3af; }
+    .vc-waiting-dots { display: flex; gap: 6px; }
+    .vc-waiting-dots span {
+        width: 8px; height: 8px; border-radius: 50%; background: #00a896;
+        animation: dot-b 1.2s infinite;
     }
-    .call-status .dot {
-        width: 7px; height: 7px;
-        border-radius: 50%;
-        background: #ccc;
-        animation: blink 1.5s infinite;
+    .vc-waiting-dots span:nth-child(2) { animation-delay:.2s; }
+    .vc-waiting-dots span:nth-child(3) { animation-delay:.4s; }
+    @keyframes dot-b {
+        0%,80%,100% { transform: translateY(0); }
+        40% { transform: translateY(-7px); }
     }
-    .call-status.connected .dot { background: #25D366; animation: none; }
-    .call-timer {
-        color: #fff;
-        font-size: 0.9rem;
-        font-weight: 600;
-        font-variant-numeric: tabular-nums;
-        text-shadow: 0 1px 4px rgba(0,0,0,0.5);
-        display: none;
-        padding-top: 4px;
-    }
-    @keyframes blink { 0%,100% { opacity: 1; } 50% { opacity: 0.3; } }
 
-    /* ── Local video (picture-in-picture) ── */
-    .local-pip {
+    /* ── Top-left: Doctor's own info pill ── */
+    .vc-self-pill {
         position: absolute;
-        bottom: 140px; right: 18px;
-        width: 110px; height: 160px;
-        border-radius: 14px;
-        background: #333;
-        border: 2px solid rgba(255,255,255,0.6);
-        overflow: hidden;
-        z-index: 10;
-        cursor: pointer;
-        box-shadow: 0 4px 20px rgba(0,0,0,0.4);
-        transition: all 0.25s ease;
+        top: 18px;
+        left: 18px;
+        background: rgba(20, 20, 30, 0.6);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255,255,255,0.1);
+        border-radius: 40px;
+        padding: 6px 14px 6px 6px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        z-index: 30;
+        color: #fff;
     }
-    .local-pip:hover { transform: scale(1.05); }
-    .local-pip.swapped { inset: 0; width: 100%; height: 100%; border-radius: 0; border: none; z-index: 1; bottom: auto; right: auto; }
+    .vc-self-pill img {
+        width: 34px; height: 34px;
+        border-radius: 50%;
+        object-fit: cover;
+        background: #374151;
+        border: 1.5px solid rgba(255,255,255,0.3);
+    }
+    .vc-self-name { font-size: 0.88rem; font-weight: 700; line-height: 1.2; }
+    .vc-self-role { font-size: 0.68rem; color: rgba(255,255,255,0.55); }
+
+    /* ── Top-centre: Encrypted session badge ── */
+    .vc-enc-pill {
+        position: absolute;
+        top: 18px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: rgba(20, 20, 30, 0.55);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255,255,255,0.1);
+        border-radius: 20px;
+        padding: 6px 16px;
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        z-index: 30;
+        color: #4ade80;
+        font-size: 0.78rem;
+        font-weight: 700;
+        white-space: nowrap;
+    }
+    .vc-enc-dot {
+        width: 8px; height: 8px; border-radius: 50%;
+        background: #4ade80;
+    }
+    .vc-enc-dot.waiting { background: #fbbf24; animation: pulse-dot 1.2s infinite; }
+    @keyframes pulse-dot {
+        0%,100% { opacity:1; } 50% { opacity:0.4; }
+    }
+
+    /* ── Local video PiP (bottom-right) ── */
+    .vc-pip {
+        position: absolute;
+        bottom: 88px;
+        right: 18px;
+        width: 175px;
+        height: 118px;
+        border-radius: 10px;
+        background: #111;
+        overflow: hidden;
+        z-index: 20;
+        cursor: pointer;
+        border: 2px solid rgba(255,255,255,0.65);
+        box-shadow: 0 4px 20px rgba(0,0,0,0.45);
+        transition: transform 0.2s;
+    }
+    .vc-pip:hover { transform: scale(1.04); }
     #localVideo {
         width: 100%; height: 100%;
         object-fit: cover;
         transform: scaleX(-1);
-        border-radius: 12px;
+        display: block;
     }
-    .local-pip.swapped #localVideo { border-radius: 0; }
 
-    /* ── Waiting state (before peer joins) ── */
-    .call-waiting {
+    /* PiP swap */
+    .vc-card.swapped #remoteVideo {
         position: absolute;
-        inset: 0;
+        bottom: 88px; right: 18px;
+        width: 175px; height: 118px;
+        border-radius: 10px;
+        border: 2px solid rgba(255,255,255,0.65);
+        z-index: 20; object-fit: cover;
+    }
+    .vc-card.swapped .vc-pip {
+        width: 100%; height: 100%;
+        bottom: 0; right: 0;
+        border: none; border-radius: 16px;
+        z-index: 1;
+    }
+    .vc-card.swapped #localVideo { border-radius: 16px; }
+
+    /* ── Controls — 3 plain floating buttons ── */
+    .vc-controls {
+        position: absolute;
+        bottom: 22px;
+        left: 50%;
+        transform: translateX(-50%);
         display: flex;
-        flex-direction: column;
         align-items: center;
-        justify-content: center;
-        z-index: 5;
-        background: linear-gradient(135deg, #0A3D62 0%, #1a5276 100%);
+        gap: 14px;
+        z-index: 30;
     }
-    .call-waiting .waiting-avatar {
-        width: 100px; height: 100px;
+    .vc-btn {
+        width: 54px; height: 54px;
         border-radius: 50%;
-        border: 4px solid rgba(255,255,255,0.3);
-        margin-bottom: 20px;
-        animation: pulse-avatar 2s infinite;
-    }
-    @keyframes pulse-avatar {
-        0%,100% { box-shadow: 0 0 0 0 rgba(255,255,255,0.3); }
-        50% { box-shadow: 0 0 0 20px rgba(255,255,255,0); }
-    }
-    .call-waiting h3 { color: #fff; font-weight: 700; margin-bottom: 8px; }
-    .call-waiting p { color: rgba(255,255,255,0.7); font-size: 0.9rem; }
-    .call-waiting .ring-dots span {
-        display: inline-block;
-        width: 8px; height: 8px;
-        border-radius: 50%;
-        background: rgba(255,255,255,0.6);
-        margin: 0 3px;
-        animation: ring-bounce 1.2s infinite;
-    }
-    .call-waiting .ring-dots span:nth-child(2) { animation-delay: 0.2s; }
-    .call-waiting .ring-dots span:nth-child(3) { animation-delay: 0.4s; }
-    @keyframes ring-bounce {
-        0%,80%,100% { transform: scale(0.6); opacity: 0.4; }
-        40% { transform: scale(1); opacity: 1; }
-    }
-
-    /* ── Call ended state ── */
-    .call-ended-screen {
-        position: absolute;
-        inset: 0;
-        display: none;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        z-index: 20;
-        background: rgba(0,0,0,0.85);
-        backdrop-filter: blur(6px);
-    }
-    .call-ended-screen.active { display: flex; }
-    .call-ended-screen .ended-icon {
-        width: 80px; height: 80px;
-        border-radius: 50%;
-        background: #e74c3c;
-        display: flex; align-items: center; justify-content: center;
-        margin-bottom: 20px;
-    }
-    .call-ended-screen h3 { color: #fff; font-weight: 700; margin-bottom: 8px; }
-    .call-ended-screen p { color: rgba(255,255,255,0.6); margin-bottom: 30px; }
-    .call-ended-screen .btn-return {
-        background: #fff;
-        color: #0A3D62;
         border: none;
-        border-radius: 30px;
-        padding: 12px 32px;
-        font-weight: 700;
-        font-size: 1rem;
-        cursor: pointer;
-        text-decoration: none;
-        transition: all 0.2s;
-    }
-    .call-ended-screen .btn-return:hover { background: #f0f4f8; transform: scale(1.03); }
-
-    /* ── Controls bar ── */
-    .call-controls {
-        position: absolute;
-        bottom: 40px; left: 0; right: 0;
-        z-index: 10;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 18px;
-    }
-    .ctrl-btn {
-        display: flex; flex-direction: column; align-items: center; gap: 6px;
-        background: none; border: none; cursor: pointer; padding: 0;
-    }
-    .ctrl-icon {
-        width: 58px; height: 58px;
-        border-radius: 50%;
         display: flex; align-items: center; justify-content: center;
-        transition: all 0.2s;
+        cursor: pointer;
+        transition: background 0.18s, transform 0.15s;
+        flex-shrink: 0;
     }
-    .ctrl-btn:hover .ctrl-icon { transform: scale(1.08); }
-    .ctrl-icon.white { background: rgba(255,255,255,0.18); backdrop-filter: blur(6px); color: #fff; }
-    .ctrl-icon.white.muted { background: rgba(255,255,255,0.9); color: #333; }
-    .ctrl-icon.red { background: #e74c3c; color: #fff; width: 68px; height: 68px; }
-    .ctrl-icon.red:hover { background: #c0392b; }
-    .ctrl-icon.green { background: #25D366; color: #fff; }
-    .ctrl-label {
-        color: rgba(255,255,255,0.8);
-        font-size: 0.7rem;
-        font-weight: 600;
+    .vc-btn-white {
+        background: #fff;
+        color: #1a1a1a;
+        box-shadow: 0 2px 12px rgba(0,0,0,0.25);
+    }
+    .vc-btn-white:hover { background: #f0f0f0; transform: scale(1.07); }
+    .vc-btn-white.off {
+        background: rgba(239,68,68,0.15);
+        color: #ef4444;
+    }
+    .vc-btn-red {
+        background: #ef4444;
+        color: #fff;
+        box-shadow: 0 2px 16px rgba(239,68,68,0.45);
+        width: 58px; height: 58px;
+    }
+    .vc-btn-red:hover { background: #dc2626; transform: scale(1.08); }
+    .vc-btn-red:active { transform: scale(0.95); }
+
+    /* ══════════════════════════════════════
+       DOCTOR HUD SIDEBAR
+    ══════════════════════════════════════ */
+    .vc-hud {
+        background: #fff;
+        border-radius: 16px;
+        height: 72vh;
+        min-height: 420px;
+        padding: 22px 18px;
+        overflow-y: auto;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+        display: flex;
+        flex-direction: column;
+    }
+    /* Scrollbar */
+    .vc-hud::-webkit-scrollbar { width: 4px; }
+    .vc-hud::-webkit-scrollbar-thumb { background: #e5e7eb; border-radius: 4px; }
+
+    .vc-hud-title {
+        font-size: 0.97rem;
+        font-weight: 800;
+        color: #0A3D62;
+        display: flex; align-items: center; gap: 8px;
+        margin-bottom: 2px;
+    }
+    .vc-hud-sub {
+        font-size: 0.76rem; color: #9aa5b1; margin-bottom: 18px;
+    }
+    .vc-hud-label {
+        font-size: 0.65rem;
+        font-weight: 800;
+        color: #9aa5b1;
+        text-transform: uppercase;
+        letter-spacing: 0.7px;
+        margin: 14px 0 10px;
     }
 
-    /* Audio-only mode */
-    .audio-only-bg {
-        position: absolute;
-        inset: 0;
-        background: linear-gradient(135deg, #0A3D62 0%, #1a5276 100%);
-        display: flex; flex-direction: column; align-items: center; justify-content: center;
-        z-index: 3;
+    /* Risk cards — white with left border */
+    .vc-risk {
+        background: #fff;
+        border-radius: 10px;
+        border: 1px solid #f0f0f0;
+        border-left: 4px solid #22c55e;
+        padding: 11px 13px;
+        margin-bottom: 9px;
+        box-shadow: 0 1px 4px rgba(0,0,0,0.04);
     }
-    .audio-only-bg img {
-        width: 120px; height: 120px;
-        border-radius: 50%;
-        border: 4px solid rgba(255,255,255,0.3);
-        margin-bottom: 20px;
+    .vc-risk.high { border-left-color: #ef4444; }
+    .vc-risk.medium { border-left-color: #22c55e; }
+    .vc-risk-row {
+        display: flex; align-items: center;
+        justify-content: space-between;
+        margin-bottom: 5px;
     }
-    .audio-only-bg h3 { color: #fff; font-weight: 700; margin: 0 0 4px; }
-    .audio-only-bg p { color: rgba(255,255,255,0.6); font-size: 0.85rem; margin: 0; }
-
-    /* ── Mobile tweaks ── */
-    @media (max-width: 575.98px) {
-        .local-pip { width: 90px; height: 130px; bottom: 120px; right: 12px; }
-        .call-controls { gap: 12px; bottom: 30px; }
-        .ctrl-icon { width: 52px; height: 52px; }
-        .ctrl-icon.red { width: 62px; height: 62px; }
-        .ctrl-label { font-size: 0.65rem; }
-        .call-peer-name { font-size: 0.95rem; }
+    .vc-risk-date { font-weight: 800; color: #1e2730; font-size: 0.82rem; }
+    .vc-risk-badge {
+        font-size: 0.62rem; font-weight: 700;
+        padding: 3px 10px; border-radius: 20px; color: #fff;
+        white-space: nowrap;
+    }
+    .vc-risk-badge.high { background: #ef4444; }
+    .vc-risk-badge.medium { background: #22c55e; }
+    .vc-risk-text {
+        font-size: 0.78rem; color: #6b7280;
+        line-height: 1.4;
+        font-style: italic;
+    }
+    .vc-hud-empty {
+        text-align: center; padding: 16px 10px;
+        color: #9aa5b1; border: 1.5px dashed #e5e7eb;
+        border-radius: 10px; font-size: 0.78rem;
     }
 </style>
 {% endblock %}
 
-{% block content %}{% endblock %}
+{% block content %}
 
-{% block extra_js %}
 {{ room_name|json_script:"room-name" }}
 <script id="audio-only-flag" type="application/json">{% if is_audio_only %}true{% else %}false{% endif %}</script>
-<script id="return-url-data" type="application/json">"{{ return_url|default:'/dashboard/'|escapejs }}"</script>
 
-<div class="call-shell" id="call-shell">
+<div class="vc-layout {% if user.role != 'DOCTOR' %}patient-view{% endif %}">
 
-    <!-- Remote video -->
-    <video id="remoteVideo" autoplay playsinline></video>
+    <!-- ══════════════════════════════════════
+         VIDEO CARD
+    ══════════════════════════════════════ -->
+    <div class="vc-card" id="vc-card">
 
-    <!-- Gradient overlay -->
-    <div class="call-overlay"></div>
+        <!-- Remote video -->
+        <video id="remoteVideo" autoplay playsinline></video>
 
-    {% if is_audio_only %}
-    <!-- Audio-only background -->
-    <div class="audio-only-bg" id="audio-bg">
-        <img src="https://api.dicebear.com/7.x/avataaars/svg?seed={{ target_user.username }}&backgroundColor=1e2a3b" alt="{{ target_user.username }}">
-        <h3>{{ target_user.get_full_name|default:target_user.username|title }}</h3>
-        <p id="audio-status-text">Connecting...</p>
+        <!-- Waiting overlay -->
+        <div class="vc-waiting" id="waiting-overlay">
+            <img src="https://api.dicebear.com/7.x/avataaars/svg?seed={{ target_user.username }}&backgroundColor=1e2a3b"
+                 class="vc-waiting-avatar" alt="{{ target_user.username }}">
+            <div class="vc-waiting-name">{{ target_user.get_full_name|default:target_user.username|title }}</div>
+            <div class="vc-waiting-sub">Waiting for {{ target_user.username|title }} to join…</div>
+            <div class="vc-waiting-dots"><span></span><span></span><span></span></div>
+        </div>
+
+        <!-- Top-left: DOCTOR's own info -->
+        <div class="vc-self-pill">
+            {% if user.role == 'DOCTOR' %}
+                <img src="{{ user.doctor_profile.get_avatar_url }}"
+                     onerror="this.src='https://ui-avatars.com/api/?name={{ user.username }}&background=0A3D62&color=fff&size=68'"
+                     alt="Dr. {{ user.username }}">
+                <div>
+                    <div class="vc-self-name">Dr. {{ user.get_full_name|default:user.username|title }}</div>
+                    <div class="vc-self-role">Doctor</div>
+                </div>
+            {% else %}
+                <img src="{{ user.patient_profile.get_avatar_url }}"
+                     onerror="this.src='https://ui-avatars.com/api/?name={{ user.username }}&background=00a896&color=fff&size=68'"
+                     alt="{{ user.username }}">
+                <div>
+                    <div class="vc-self-name">{{ user.get_full_name|default:user.username|title }}</div>
+                    <div class="vc-self-role">Patient</div>
+                </div>
+            {% endif %}
+        </div>
+
+        <!-- Top-centre: Encrypted session status -->
+        <div class="vc-enc-pill" id="enc-pill">
+            <div class="vc-enc-dot waiting" id="enc-dot"></div>
+            <span id="enc-text">Connecting…</span>
+        </div>
+
+        <!-- Local PiP (bottom-right) -->
+        <div class="vc-pip" id="local-pip">
+            <video id="localVideo" autoplay playsinline muted></video>
+        </div>
+
+        <!-- Controls: 3 plain buttons -->
+        <div class="vc-controls">
+            <!-- Mic -->
+            <button class="vc-btn vc-btn-white" id="btn-mic" title="Toggle microphone">
+                <svg id="mic-on" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
+                <svg id="mic-off" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:none"><line x1="1" y1="1" x2="23" y2="23"/><path d="M9 9v3a3 3 0 0 0 5.12 2.12M15 9.34V4a3 3 0 0 0-5.94-.6"/><path d="M17 16.95A7 7 0 0 1 5 12v-2m14 0v2a7 7 0 0 1-.11 1.23"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
+            </button>
+
+            <!-- Camera -->
+            <button class="vc-btn vc-btn-white" id="btn-cam" title="Toggle camera">
+                <svg id="cam-on" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
+                <svg id="cam-off" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:none"><line x1="1" y1="1" x2="23" y2="23"/><path d="M21 21H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h3m3-3h6l2 3h3a2 2 0 0 1 2 2v9.34m-7.72-2.06A4 4 0 1 1 7.72 9.72"/></svg>
+            </button>
+
+            <!-- End Call -->
+            <button class="vc-btn vc-btn-red" id="btn-end" title="End Call">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M10.68 13.31a16 16 0 0 0 3.41 2.6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7 2 2 0 0 1 1.72 2v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.42 19.42 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 2.59 3.4z"/><line x1="23" y1="1" x2="1" y2="23"/></svg>
+            </button>
+        </div>
+    </div>
+
+    <!-- ══════════════════════════════════════
+         DOCTOR-ONLY HUD SIDEBAR
+    ══════════════════════════════════════ -->
+    {% if user.role == 'DOCTOR' %}
+    <div class="vc-hud">
+        <div class="vc-hud-title">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+            Patient Records HUD
+        </div>
+        <div class="vc-hud-sub">Live Clinical Feed</div>
+
+        <div class="vc-hud-label">Recent Health Risks</div>
+
+        {% if diagnoses %}
+            {% for dx in diagnoses %}
+            <div class="vc-risk {% if dx.malaria_risk == 'High' or dx.cholera_risk == 'High' or dx.is_urgent %}high{% else %}medium{% endif %}">
+                <div class="vc-risk-row">
+                    <span class="vc-risk-date">{{ dx.created_at|date:"M d" }}</span>
+                    <span class="vc-risk-badge {% if dx.malaria_risk == 'High' or dx.cholera_risk == 'High' or dx.is_urgent %}high{% else %}medium{% endif %}">
+                        {% if dx.malaria_risk == 'High' or dx.cholera_risk == 'High' or dx.is_urgent %}High Risk{% else %}Medium Risk{% endif %}
+                    </span>
+                </div>
+                <div class="vc-risk-text">"{{ dx.symptoms_reported|truncatechars:90 }}"</div>
+            </div>
+            {% endfor %}
+        {% else %}
+            <div class="vc-hud-empty">No recent AI diagnosis risk tags found.</div>
+        {% endif %}
+
+        <div class="vc-hud-label">Requested Prescriptions</div>
+        <div class="vc-hud-empty">No active prescription requests.</div>
     </div>
     {% endif %}
 
-    <!-- Waiting state (shown before peer joins) -->
-    <div class="call-waiting" id="call-waiting">
-        <img src="https://api.dicebear.com/7.x/avataaars/svg?seed={{ target_user.username }}&backgroundColor=1e2a3b" class="waiting-avatar" alt="">
-        <h3>{{ target_user.get_full_name|default:target_user.username|title }}</h3>
-        <p>{% if is_audio_only %}Audio call{% else %}Video call{% endif %} • Ringing...</p>
-        <div class="ring-dots mt-2">
-            <span></span><span></span><span></span>
-        </div>
-    </div>
-
-    <!-- Call ended screen -->
-    <div class="call-ended-screen" id="call-ended-screen">
-        <div class="ended-icon">
-            <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5">
-                <path d="M10.68 13.31a16 16 0 0 0 3.41 2.6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7 2 2 0 0 1 1.72 2v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.42 19.42 0 0 1 3.14 12.7 19.79 19.79 0 0 1 .07 4.07 2 2 0 0 1 2.06 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L6.09 9.91"/>
-                <line x1="23" y1="1" x2="1" y2="23"/>
-            </svg>
-        </div>
-        <h3 id="ended-title">Call Ended</h3>
-        <p id="ended-duration"></p>
-        <a href="{{ return_url|default:'/dashboard/' }}" class="btn-return">Back to Chat</a>
-    </div>
-
-    <!-- Top bar -->
-    <div class="call-top-bar" id="call-top-bar" style="display:none;">
-        <div class="call-peer-info">
-            <img src="https://api.dicebear.com/7.x/avataaars/svg?seed={{ target_user.username }}&backgroundColor=1e2a3b" class="call-peer-avatar" alt="">
-            <div>
-                <p class="call-peer-name">{{ target_user.get_full_name|default:target_user.username|title }}</p>
-                <div class="call-status" id="call-status">
-                    <span class="dot"></span>
-                    <span id="status-text">Connecting...</span>
-                </div>
-            </div>
-        </div>
-        <div class="call-timer" id="call-timer">00:00</div>
-    </div>
-
-    <!-- Local PiP video -->
-    <div class="local-pip" id="local-pip" onclick="swapVideos()">
-        <video id="localVideo" autoplay playsinline muted></video>
-    </div>
-
-    <!-- Controls -->
-    <div class="call-controls">
-        <button class="ctrl-btn" onclick="toggleMic()" id="mic-btn" title="Mute/Unmute">
-            <div class="ctrl-icon white" id="mic-icon">
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
-                    <path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/>
-                </svg>
-            </div>
-            <span class="ctrl-label" id="mic-label">Mute</span>
-        </button>
-
-        {% if not is_audio_only %}
-        <button class="ctrl-btn" onclick="toggleCamera()" id="cam-btn" title="Toggle video">
-            <div class="ctrl-icon white" id="cam-icon">
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/>
-                </svg>
-            </div>
-            <span class="ctrl-label" id="cam-label">Video</span>
-        </button>
-        {% endif %}
-
-        <!-- End call (prominent red) -->
-        <button class="ctrl-btn" onclick="endCall()" title="End call">
-            <div class="ctrl-icon red">
-                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-                    <path d="M10.68 13.31a16 16 0 0 0 3.41 2.6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7 2 2 0 0 1 1.72 2v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.42 19.42 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 2.59 3.4z"/>
-                    <line x1="23" y1="1" x2="1" y2="23"/>
-                </svg>
-            </div>
-            <span class="ctrl-label">End</span>
-        </button>
-
-        {% if not is_audio_only %}
-        <button class="ctrl-btn" onclick="switchCamera()" title="Switch camera">
-            <div class="ctrl-icon white">
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M20 7h-3a2 2 0 0 1-2-2 3 3 0 0 0-6 0 2 2 0 0 1-2 2H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2z"/>
-                    <circle cx="12" cy="13" r="3"/>
-                </svg>
-            </div>
-            <span class="ctrl-label">Flip</span>
-        </button>
-        {% endif %}
-
-        <button class="ctrl-btn" onclick="toggleSpeaker()" title="Speaker">
-            <div class="ctrl-icon white" id="spk-icon">
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
-                    <path d="M19.07 4.93a10 10 0 0 1 0 14.14"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/>
-                </svg>
-            </div>
-            <span class="ctrl-label">Speaker</span>
-        </button>
-    </div>
 </div>
+{% endblock %}
 
+{% block extra_js %}
 <script>
-const roomName   = JSON.parse(document.getElementById('room-name').textContent);
-const isAudioOnly = JSON.parse(document.getElementById('audio-only-flag').textContent);
-const RETURN_URL  = JSON.parse(document.getElementById('return-url-data').textContent);
+    const roomName    = JSON.parse(document.getElementById('room-name').textContent);
+    const isAudioOnly = JSON.parse(document.getElementById('audio-only-flag').textContent);
+    const RETURN_URL  = "{{ return_url|default:'/dashboard/' }}";
 
-const wsScheme = location.protocol === 'https:' ? 'wss' : 'ws';
-const socket   = new WebSocket(`${wsScheme}://${location.host}/ws/call/${roomName}/`);
-
-const servers = {
-    iceServers: [
-        { urls: 'stun:stun.l.google.com:19302' },
-        { urls: 'stun:stun1.l.google.com:19302' },
-        { urls: 'stun:stun2.l.google.com:19302' },
-    ]
-};
-
-let localStream    = null;
-let peerConnection = null;
-let isInitiator    = false;
-let micOn          = true;
-let camOn          = true;
-let currentFacing  = 'user';
-let callStartTime  = null;
-let timerInterval  = null;
-let callEnded      = false;
-let speakerOn      = true;
-
-// ── DOM refs ──
-const remoteVideo  = document.getElementById('remoteVideo');
-const localVideo   = document.getElementById('localVideo');
-const waitingEl    = document.getElementById('call-waiting');
-const topBar       = document.getElementById('call-top-bar');
-const callTimer    = document.getElementById('call-timer');
-const statusEl     = document.getElementById('call-status');
-const statusText   = document.getElementById('status-text');
-const endedScreen  = document.getElementById('call-ended-screen');
-const endedTitle   = document.getElementById('ended-title');
-const endedDur     = document.getElementById('ended-duration');
-const audioBg      = document.getElementById('audio-bg');
-const audioStatusTxt = document.getElementById('audio-status-text');
-
-// ── Media constraints with echo/noise suppression ──
-function getConstraints() {
-    return {
-        audio: {
-            echoCancellation: true,
-            noiseSuppression: true,
-            autoGainControl: true,
-            sampleRate: 48000
-        },
-        video: isAudioOnly ? false : {
-            facingMode: currentFacing,
-            width: { ideal: 1280 }, height: { ideal: 720 },
-            frameRate: { ideal: 30 }
-        }
-    };
-}
-
-// ── Start local stream ──
-async function startLocalStream() {
-    try {
-        localStream = await navigator.mediaDevices.getUserMedia(getConstraints());
-        localVideo.srcObject = localStream;
-    } catch (err) {
-        console.warn('Media error:', err);
-        // Try audio-only fallback
-        try {
-            localStream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } });
-            localVideo.srcObject = localStream;
-        } catch (e) { console.error('Cannot access mic/camera', e); }
-    }
-}
-
-// ── Create Peer Connection ──
-function createPC() {
-    peerConnection = new RTCPeerConnection(servers);
-
-    // Add local tracks
-    if (localStream) {
-        localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
-    }
-
-    // ICE candidates
-    peerConnection.onicecandidate = (e) => {
-        if (e.candidate) {
-            socket.send(JSON.stringify({ action: 'new-ice-candidate', candidate: e.candidate }));
-        }
-    };
-
-    // Remote stream
-    peerConnection.ontrack = (e) => {
-        remoteVideo.srcObject = e.streams[0];
-        showConnected();
-    };
-
-    // Connection state monitoring
-    peerConnection.onconnectionstatechange = () => {
-        const state = peerConnection.connectionState;
-        if (state === 'connected') showConnected();
-        else if (state === 'disconnected' || state === 'failed') {
-            if (!callEnded) showCallEnded('Connection Lost');
-        }
-    };
-}
-
-// ── Create offer (initiator side) ──
-async function createOffer() {
-    createPC();
-    const offer = await peerConnection.createOffer();
-    await peerConnection.setLocalDescription(offer);
-    socket.send(JSON.stringify({ action: 'new-offer', offer: offer }));
-}
-
-// ── WebSocket messages ──
-socket.onopen = async () => {
-    await startLocalStream();
-};
-
-socket.onmessage = async (event) => {
-    const data = JSON.parse(event.data);
-
-    if (data.action === 'peer-joined') {
-        // The second peer connected — first peer creates offer
-        if (!isInitiator && !peerConnection) {
-            isInitiator = true;
-            await createOffer();
-        }
-    }
-
-    else if (data.action === 'new-offer') {
-        if (!peerConnection) createPC();
-        await peerConnection.setRemoteDescription(new RTCSessionDescription(data.offer));
-        const answer = await peerConnection.createAnswer();
-        await peerConnection.setLocalDescription(answer);
-        socket.send(JSON.stringify({ action: 'new-answer', answer: answer }));
-    }
-
-    else if (data.action === 'new-answer') {
-        if (peerConnection && peerConnection.signalingState !== 'stable') {
-            await peerConnection.setRemoteDescription(new RTCSessionDescription(data.answer));
-        }
-    }
-
-    else if (data.action === 'new-ice-candidate') {
-        try {
-            if (peerConnection && data.candidate) {
-                await peerConnection.addIceCandidate(new RTCIceCandidate(data.candidate));
+    const ICE_SERVERS = {
+        iceServers: [
+            { urls: 'stun:stun.l.google.com:19302' },
+            { urls: 'stun:stun1.l.google.com:19302' },
+            { urls: 'stun:stun2.l.google.com:19302' },
+            {
+                urls: 'turn:openrelay.metered.ca:80',
+                username: 'openrelayproject',
+                credential: 'openrelayproject'
+            },
+            {
+                urls: 'turn:openrelay.metered.ca:443',
+                username: 'openrelayproject',
+                credential: 'openrelayproject'
+            },
+            {
+                urls: 'turn:openrelay.metered.ca:443?transport=tcp',
+                username: 'openrelayproject',
+                credential: 'openrelayproject'
             }
-        } catch (e) { console.warn('ICE error:', e); }
-    }
+        ]
+    };
 
-    else if (data.action === 'call-ended') {
-        if (!callEnded) showCallEnded('Call Ended');
-    }
-};
+    const localVideo     = document.getElementById('localVideo');
+    const remoteVideo    = document.getElementById('remoteVideo');
+    const waitingOverlay = document.getElementById('waiting-overlay');
+    const encDot         = document.getElementById('enc-dot');
+    const encText        = document.getElementById('enc-text');
 
-socket.onclose = () => {
-    if (!callEnded) showCallEnded('Connection Lost');
-};
+    let localStream = null;
+    let peerConn    = null;
+    let micOn = true, camOn = true;
 
-// ── Call connected UI ──
-function showConnected() {
-    waitingEl.style.display = 'none';
-    topBar.style.display = 'flex';
-    callTimer.style.display = 'block';
-    statusEl.classList.add('connected');
-    statusText.textContent = 'Connected';
-    if (audioBg) {
-        if (audioStatusTxt) audioStatusTxt.textContent = 'Connected';
-    }
+    // ── WebSocket ────────────────────────────────────────────────────
+    const wsScheme = location.protocol === 'https:' ? 'wss' : 'ws';
+    const socket   = new WebSocket(`${wsScheme}://${location.host}/ws/call/${roomName}/`);
 
-    // Start timer
-    if (!callStartTime) {
-        callStartTime = Date.now();
-        timerInterval = setInterval(updateTimer, 1000);
-    }
-}
+    setStatus('Connecting…', false);
 
-function updateTimer() {
-    const elapsed = Math.floor((Date.now() - callStartTime) / 1000);
-    const m = String(Math.floor(elapsed / 60)).padStart(2, '0');
-    const s = String(elapsed % 60).padStart(2, '0');
-    callTimer.textContent = m + ':' + s;
-}
+    socket.onopen = async () => {
+        await startLocalStream();
+    };
 
-function getElapsedStr() {
-    if (!callStartTime) return '';
-    const elapsed = Math.floor((Date.now() - callStartTime) / 1000);
-    const m = Math.floor(elapsed / 60);
-    const s = elapsed % 60;
-    return `Duration: ${m}m ${s}s`;
-}
+    socket.onclose  = () => setStatus('Disconnected', false);
+    socket.onerror  = () => setStatus('Connection error', false);
 
-// ── End call ──
-function endCall() {
-    if (callEnded) return;
-    callEnded = true;
+    socket.onmessage = async ({ data: raw }) => {
+        const data = JSON.parse(raw);
+        switch (data.action) {
+            case 'waiting_for_peer':
+                setStatus('Waiting for the other party…', false);
+                break;
 
-    // Signal the other peer
-    if (socket.readyState === WebSocket.OPEN) {
-        socket.send(JSON.stringify({ action: 'call-ended' }));
-    }
-    socket.close();
+            case 'make_offer':
+                setStatus('Peer joined — connecting…', false);
+                if (!peerConn) createPeerConnection();
+                await sendOffer();
+                break;
 
-    cleanupMedia();
-    showCallEnded('Call Ended');
-}
+            case 'peer_joined':
+                setStatus('Peer joined…', false);
+                if (!peerConn) createPeerConnection();
+                break;
 
-function cleanupMedia() {
-    if (timerInterval) clearInterval(timerInterval);
-    if (localStream) localStream.getTracks().forEach(t => t.stop());
-    if (peerConnection) peerConnection.close();
-}
+            case 'new-offer':
+                if (!peerConn) createPeerConnection();
+                await peerConn.setRemoteDescription(new RTCSessionDescription(data.offer));
+                const answer = await peerConn.createAnswer();
+                await peerConn.setLocalDescription(answer);
+                send({ action: 'new-answer', answer });
+                break;
 
-function showCallEnded(title) {
-    callEnded = true;
-    cleanupMedia();
-    endedTitle.textContent = title;
-    endedDur.textContent = getElapsedStr();
-    endedScreen.classList.add('active');
-    // Auto-redirect after 4 seconds
-    setTimeout(() => { window.location.href = RETURN_URL; }, 4000);
-}
+            case 'new-answer':
+                if (peerConn && peerConn.signalingState !== 'stable')
+                    await peerConn.setRemoteDescription(new RTCSessionDescription(data.answer));
+                break;
 
-// ── Mic toggle ──
-function toggleMic() {
-    if (!localStream) return;
-    const track = localStream.getAudioTracks()[0];
-    if (!track) return;
-    micOn = !micOn;
-    track.enabled = micOn;
-    const icon = document.getElementById('mic-icon');
-    const label = document.getElementById('mic-label');
-    if (micOn) {
-        icon.classList.remove('muted');
-        label.textContent = 'Mute';
-        icon.innerHTML = `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>`;
-    } else {
-        icon.classList.add('muted');
-        label.textContent = 'Unmute';
-        icon.innerHTML = `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="1" y1="1" x2="23" y2="23"/><path d="M9 9v3a3 3 0 0 0 5.12 2.12M15 9.34V4a3 3 0 0 0-5.94-.6"/><path d="M17 16.95A7 7 0 0 1 5 12v-2m14 0v2c0 .39-.03.77-.08 1.14"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>`;
-    }
-}
+            case 'new-ice-candidate':
+                if (peerConn) {
+                    try { await peerConn.addIceCandidate(new RTCIceCandidate(data.candidate)); }
+                    catch(e) {}
+                }
+                break;
 
-// ── Camera toggle ──
-function toggleCamera() {
-    if (!localStream) return;
-    const track = localStream.getVideoTracks()[0];
-    if (!track) return;
-    camOn = !camOn;
-    track.enabled = camOn;
-    const icon = document.getElementById('cam-icon');
-    const label = document.getElementById('cam-label');
-    if (camOn) {
-        icon.classList.remove('muted');
-        label.textContent = 'Video';
-    } else {
-        icon.classList.add('muted');
-        label.textContent = 'No Video';
-    }
-}
+            case 'peer_left':
+                setStatus('Other party has left', false);
+                remoteVideo.srcObject = null;
+                break;
 
-// ── Switch camera (front/back) ──
-async function switchCamera() {
-    if (!localStream || isAudioOnly) return;
-    currentFacing = currentFacing === 'user' ? 'environment' : 'user';
-    try {
-        const newStream = await navigator.mediaDevices.getUserMedia({
-            video: { facingMode: currentFacing, width: { ideal: 1280 }, height: { ideal: 720 } },
-            audio: false
-        });
-        const newTrack = newStream.getVideoTracks()[0];
-        localVideo.srcObject = new MediaStream([newTrack, ...localStream.getAudioTracks()]);
-
-        if (peerConnection) {
-            const sender = peerConnection.getSenders().find(s => s.track && s.track.kind === 'video');
-            if (sender) await sender.replaceTrack(newTrack);
+            case 'room_full':
+                alert('This call room is full.');
+                location.href = RETURN_URL;
+                break;
         }
+    };
 
-        // Stop old video track
-        localStream.getVideoTracks().forEach(t => t.stop());
-        localStream = new MediaStream([newTrack, ...localStream.getAudioTracks()]);
-    } catch (e) { console.warn('Camera switch failed:', e); }
-}
-
-// ── Speaker toggle (mobile) ──
-function toggleSpeaker() {
-    speakerOn = !speakerOn;
-    // On mobile, setSinkId is used when available
-    if (remoteVideo.setSinkId) {
-        remoteVideo.setSinkId(speakerOn ? '' : 'communications').catch(() => {});
+    function send(obj) {
+        if (socket.readyState === WebSocket.OPEN) socket.send(JSON.stringify(obj));
     }
-    const icon = document.getElementById('spk-icon');
-    icon.classList.toggle('muted', !speakerOn);
-}
 
-// ── Swap PiP ──
-let swapped = false;
-function swapVideos() {
-    const pip = document.getElementById('local-pip');
-    pip.classList.toggle('swapped');
-    swapped = !swapped;
-}
-
-// ── Prevent accidental page close during call ──
-window.addEventListener('beforeunload', (e) => {
-    if (!callEnded) {
-        endCall();
-        e.preventDefault();
+    // ── Local media ───────────────────────────────────────────────────
+    async function startLocalStream() {
+        try {
+            localStream = await navigator.mediaDevices.getUserMedia({
+                video: !isAudioOnly, audio: true
+            });
+            localVideo.srcObject = localStream;
+        } catch {
+            try {
+                localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+                localVideo.srcObject = localStream;
+            } catch {
+                alert('Camera/microphone access denied. Please check browser permissions.');
+            }
+        }
     }
-});
+
+    // ── Peer connection ───────────────────────────────────────────────
+    function createPeerConnection() {
+        peerConn = new RTCPeerConnection(ICE_SERVERS);
+
+        peerConn.onicecandidate = ({ candidate }) => {
+            if (candidate) send({ action: 'new-ice-candidate', candidate });
+        };
+
+        peerConn.ontrack = ({ streams }) => {
+            remoteVideo.srcObject = streams[0];
+            waitingOverlay.style.display = 'none';
+            setStatus('🔒 Encrypted Session Active', true);
+        };
+
+        peerConn.oniceconnectionstatechange = () => {
+            if (peerConn.iceConnectionState === 'failed') peerConn.restartIce();
+            if (peerConn.iceConnectionState === 'disconnected') setStatus('Connection interrupted…', false);
+        };
+
+        if (localStream) localStream.getTracks().forEach(t => peerConn.addTrack(t, localStream));
+    }
+
+    async function sendOffer() {
+        const offer = await peerConn.createOffer();
+        await peerConn.setLocalDescription(offer);
+        send({ action: 'new-offer', offer });
+    }
+
+    // ── Status ────────────────────────────────────────────────────────
+    function setStatus(text, connected) {
+        encText.textContent = text;
+        encDot.className = 'vc-enc-dot' + (connected ? '' : ' waiting');
+    }
+
+    // ── Controls ──────────────────────────────────────────────────────
+    document.getElementById('btn-mic').addEventListener('click', function() {
+        if (!localStream) return;
+        const track = localStream.getAudioTracks()[0];
+        if (!track) return;
+        micOn = !micOn;
+        track.enabled = micOn;
+        this.classList.toggle('off', !micOn);
+        document.getElementById('mic-on').style.display  = micOn ? '' : 'none';
+        document.getElementById('mic-off').style.display = micOn ? 'none' : '';
+    });
+
+    document.getElementById('btn-cam').addEventListener('click', function() {
+        if (!localStream) return;
+        const track = localStream.getVideoTracks()[0];
+        if (!track) return;
+        camOn = !camOn;
+        track.enabled = camOn;
+        this.classList.toggle('off', !camOn);
+        document.getElementById('cam-on').style.display  = camOn ? '' : 'none';
+        document.getElementById('cam-off').style.display = camOn ? 'none' : '';
+    });
+
+    document.getElementById('btn-end').addEventListener('click', () => {
+        if (localStream) localStream.getTracks().forEach(t => t.stop());
+        if (peerConn)    peerConn.close();
+        socket.close();
+        location.href = RETURN_URL;
+    });
+
+    // ── PiP swap ──────────────────────────────────────────────────────
+    document.getElementById('local-pip').addEventListener('click', () => {
+        document.getElementById('vc-card').classList.toggle('swapped');
+    });
+
+    window.addEventListener('beforeunload', () => {
+        if (localStream) localStream.getTracks().forEach(t => t.stop());
+    });
 </script>
 {% endblock %}

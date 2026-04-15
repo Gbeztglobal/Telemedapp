@@ -11,9 +11,8 @@
 
 body {
   font-family: 'Outfit', sans-serif;
-  background: linear-gradient(135deg, #0A3D62 0%, #38ada9 100%);
-  background-attachment: fixed;
-  color: var(--text-light);
+  background: #f0f2f5;
+  color: #333;
   min-height: 100vh;
 }
 
@@ -103,7 +102,7 @@ body {
 
 /* Dashboard Image-Match Overrides */
 .bg-light-blue {
-    background: #f4f8fb !important;
+    background: #f0f2f5 !important;
     color: #333 !important;
 }
 
@@ -235,13 +234,25 @@ body {
 .section-icon {
     width: 50px;
     height: 50px;
+    min-width: 50px;
+    min-height: 50px;
     background: rgba(0, 168, 150, 0.1);
     color: #00a896;
     border-radius: 12px;
     display: flex;
     align-items: center;
     justify-content: center;
+    overflow: hidden;
 }
+
+.section-icon svg {
+    width: 22px !important;
+    height: 22px !important;
+    flex-shrink: 0;
+}
+
+.hover-lift { transition: transform 0.2s; }
+.hover-lift:hover { transform: translateY(-2px); }
 
 .section-title {
     color: #0A3D62;

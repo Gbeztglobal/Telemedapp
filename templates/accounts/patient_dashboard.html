@@ -4,224 +4,677 @@
 {% block body_class %}bg-light-blue{% endblock %}
 {% block nav_class %}solid-nav{% endblock %}
 
-{% block content %}
+{% block extra_css %}
 <style>
-    @media (max-width: 767.98px) {
-        .appt-card-meta { flex-direction: column !important; gap: 12px !important; }
-        .appt-actions { flex-wrap: wrap; justify-content: flex-start !important; gap: 8px !important; width: 100%; }
-        .appt-actions .appt-date { text-align: left !important; }
-        .search-card { flex-direction: column !important; gap: 10px !important; }
-        .search-card .search-input-wrapper { width: 100%; }
-        .search-card .search-input-wrapper input { width: 100%; }
-        .section-title { font-size: 1rem !important; }
-        .clinical-header { flex-direction: column !important; align-items: flex-start !important; gap: 8px !important; }
+    /* ── Page Background ── */
+    .bg-light-blue {
+        background: #f0f2f5 !important;
+        color: #333 !important;
+    }
+
+    /* ── Layout ── */
+    .pd-wrapper {
+        display: grid;
+        grid-template-columns: 280px 1fr;
+        gap: 24px;
+        align-items: start;
+        margin-top: 24px;
+        margin-bottom: 48px;
+    }
+    @media (max-width: 900px) {
+        .pd-wrapper { grid-template-columns: 1fr; }
+    }
+
+    /* ── Sidebar Card ── */
+    .pd-sidebar {
+        background: #fff;
+        border-radius: 18px;
+        padding: 32px 24px 24px;
+        box-shadow: 0 2px 16px rgba(0,0,0,0.06);
+        text-align: center;
+    }
+
+    /* Avatar */
+    .pd-avatar-ring {
+        width: 130px;
+        height: 130px;
+        border-radius: 50%;
+        border: 4px solid #0A3D62;
+        padding: 5px;
+        margin: 0 auto 16px;
+        position: relative;
+        background: #aeddf2;
+    }
+    .pd-avatar-ring img {
+        width: 100%;
+        height: 100%;
+        border-radius: 50%;
+        object-fit: cover;
+        background: #aeddf2;
+    }
+    .pd-online-dot {
+        position: absolute;
+        bottom: 6px;
+        right: 6px;
+        width: 18px;
+        height: 18px;
+        background: #27ae60;
+        border: 3px solid #fff;
+        border-radius: 50%;
+    }
+
+    /* Patient info */
+    .pd-name {
+        font-size: 1.25rem;
+        font-weight: 800;
+        color: #0A3D62;
+        margin-bottom: 4px;
+    }
+    .pd-email {
+        font-size: 0.82rem;
+        color: #888;
+        margin-bottom: 14px;
+    }
+
+    /* Info badges */
+    .pd-badge-row {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 22px;
+    }
+    .pd-badge-age {
+        background: #fff;
+        color: #555;
+        border: 1px solid #dde1e7;
+        font-size: 0.78rem;
+        font-weight: 600;
+        padding: 6px 16px;
+        border-radius: 20px;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+    }
+    .pd-badge-role {
+        background: #4a5568;
+        color: #fff;
+        font-size: 0.78rem;
+        font-weight: 700;
+        padding: 7px 18px;
+        border-radius: 20px;
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+    }
+
+    /* Divider */
+    .pd-divider { border: none; border-top: 1px solid #eef0f3; margin: 18px 0; }
+
+    /* Stats */
+    .pd-stats {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 0;
+        margin-bottom: 18px;
+    }
+    .pd-stat {
+        padding: 8px 0;
+        text-align: center;
+    }
+    .pd-stat:first-child { border-right: 1px solid #eef0f3; }
+    .pd-stat-num {
+        font-size: 2rem;
+        font-weight: 900;
+        line-height: 1;
+        margin-bottom: 5px;
+    }
+    .pd-stat-num.navy { color: #0A3D62; }
+    .pd-stat-num.teal { color: #00a896; }
+    .pd-stat-label {
+        font-size: 0.65rem;
+        font-weight: 700;
+        color: #9aa5b1;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        line-height: 1.4;
+    }
+
+    /* Edit Profile button */
+    .pd-btn-edit {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        width: 100%;
+        padding: 11px;
+        background: #fdfdfd;
+        border: 1px solid #dde1e7;
+        border-radius: 10px;
+        color: #555;
+        font-weight: 700;
+        font-size: 0.88rem;
+        text-decoration: none;
+        transition: background 0.18s;
+    }
+    .pd-btn-edit:hover { background: #f0f2f5; color: #333; }
+
+    /* ── Main Content ── */
+    .pd-main { display: flex; flex-direction: column; gap: 0; }
+
+    /* Top bar */
+    .pd-topbar {
+        background: #fff;
+        border-radius: 50px;
+        padding: 14px 28px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        box-shadow: 0 2px 12px rgba(0,0,0,0.04);
+        margin-bottom: 28px;
+        gap: 16px;
+        flex-wrap: wrap;
+    }
+    .pd-topbar-title {
+        font-size: 1.1rem;
+        font-weight: 800;
+        color: #1e2730;
+        white-space: nowrap;
+    }
+    .pd-search {
+        position: relative;
+        flex: 1;
+        max-width: 340px;
+        min-width: 200px;
+    }
+    .pd-search svg {
+        position: absolute;
+        left: 14px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: #aaa;
+    }
+    .pd-search input {
+        width: 100%;
+        background: #f7f8fb;
+        border: 1.5px solid #e8eaed;
+        border-radius: 30px;
+        padding: 9px 16px 9px 42px;
+        font-size: 0.85rem;
+        color: #555;
+        font-family: 'Outfit', sans-serif;
+        outline: none;
+        transition: border-color 0.2s;
+    }
+    .pd-search input:focus { border-color: #00a896; }
+    .pd-search input::placeholder { color: #bbb; }
+
+    /* Section header */
+    .pd-section-head {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        margin-bottom: 16px;
+        margin-top: 6px;
+    }
+    .pd-section-icon {
+        width: 46px;
+        height: 46px;
+        min-width: 46px;
+        border-radius: 10px;
+        background: rgba(0, 168, 150, 0.1);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #00a896;
+    }
+    .pd-section-title {
+        font-size: 1.1rem;
+        font-weight: 800;
+        color: #0A3D62;
+        margin: 0;
+    }
+    .pd-hr { border: none; border-top: 1px solid #eef0f3; margin: 24px 0; }
+
+    /* Empty state */
+    .pd-empty-card {
+        background: #fff;
+        border-radius: 14px;
+        padding: 32px 24px;
+        text-align: center;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.04);
+        color: #9aa5b1;
+        font-size: 0.9rem;
+    }
+
+    /* ── AI Triage Cards ── */
+    .pd-triage-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 16px;
+        margin-bottom: 4px;
+    }
+    @media (max-width: 600px) {
+        .pd-triage-grid { grid-template-columns: 1fr; }
+    }
+    .pd-triage-card {
+        background: #fff;
+        border: 2px solid #0A3D62;
+        border-radius: 14px;
+        padding: 22px 20px 18px;
+        display: flex;
+        flex-direction: column;
+        gap: 0;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.04);
+        transition: box-shadow 0.2s;
+    }
+    .pd-triage-card:hover { box-shadow: 0 6px 24px rgba(0,0,0,0.09); }
+    .pd-triage-card.teal { border-color: #00a896; }
+    .pd-triage-card-top {
+        display: flex;
+        align-items: flex-start;
+        gap: 14px;
+        margin-bottom: 20px;
+    }
+    .pd-triage-icon {
+        width: 42px;
+        height: 42px;
+        min-width: 42px;
+        border-radius: 10px;
+        background: rgba(10, 61, 98, 0.07);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #0A3D62;
+    }
+    .pd-triage-card.teal .pd-triage-icon {
+        background: rgba(0, 168, 150, 0.1);
+        color: #00a896;
+    }
+    .pd-triage-card-label {
+        font-weight: 800;
+        color: #1e2730;
+        font-size: 0.97rem;
+        margin-bottom: 4px;
+    }
+    .pd-triage-card-desc {
+        font-size: 0.8rem;
+        color: #9aa5b1;
+        line-height: 1.4;
+    }
+    .pd-btn-triage {
+        display: block;
+        width: 100%;
+        text-align: center;
+        background: #00a896;
+        color: #fff;
+        font-weight: 700;
+        font-size: 0.88rem;
+        padding: 11px 16px;
+        border-radius: 30px;
+        border: none;
+        text-decoration: none;
+        transition: background 0.18s, transform 0.1s;
+        margin-top: auto;
+    }
+    .pd-btn-triage:hover { background: #008f7f; color: #fff; transform: translateY(-1px); }
+    .pd-btn-triage:active { transform: translateY(0); }
+
+    /* Appointment cards */
+    .pd-appt-card {
+        background: #fff;
+        border-radius: 13px;
+        padding: 16px 20px;
+        margin-bottom: 12px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.03);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        flex-wrap: wrap;
+    }
+    .pd-appt-info { display: flex; align-items: center; gap: 12px; }
+    .pd-appt-name { font-weight: 700; color: #1e2730; font-size: 0.95rem; margin-bottom: 2px; }
+    .pd-appt-specialty { font-size: 0.78rem; color: #9aa5b1; }
+    .pd-appt-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .pd-appt-date {
+        text-align: right;
+        margin-right: 4px;
+    }
+    .pd-appt-date-main { font-size: 0.82rem; font-weight: 700; color: #1e2730; }
+    .pd-appt-date-time { font-size: 0.78rem; font-weight: 700; color: #0d6efd; }
+    .pd-btn-icon {
+        width: 38px; height: 38px;
+        border-radius: 50%;
+        border: 1.5px solid #e0e0e0;
+        background: #fff;
+        display: flex; align-items: center; justify-content: center;
+        color: #00a896;
+        transition: background 0.18s, transform 0.18s;
+        text-decoration: none;
+        flex-shrink: 0;
+    }
+    .pd-btn-icon:hover { background: #f0faf9; transform: translateY(-2px); }
+    .pd-btn-call {
+        background: #fff;
+        color: #0A3D62;
+        border: 1.5px solid #e0e0e0;
+        border-radius: 20px;
+        padding: 7px 14px;
+        font-size: 0.8rem;
+        font-weight: 700;
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        text-decoration: none;
+        transition: background 0.18s;
+    }
+    .pd-btn-call:hover { background: #f0f2f5; color: #0A3D62; }
+    .pd-btn-video {
+        background: #00a896;
+        color: #fff;
+        border: none;
+        border-radius: 20px;
+        padding: 7px 14px;
+        font-size: 0.8rem;
+        font-weight: 700;
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        text-decoration: none;
+        transition: background 0.18s;
+    }
+    .pd-btn-video:hover { background: #008f7f; color: #fff; }
+
+    /* Clinical Records */
+    .pd-record-card {
+        background: #f8fbff;
+        border: 1px solid #d0e3ff;
+        border-radius: 14px;
+        padding: 20px 22px;
+        margin-bottom: 14px;
+    }
+    .pd-record-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 14px;
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+    .pd-record-doc { display: flex; align-items: center; gap: 12px; }
+    .pd-record-doc-name { font-weight: 700; color: #0A3D62; font-size: 0.9rem; margin-bottom: 2px; }
+    .pd-record-doc-date { font-size: 0.78rem; color: #9aa5b1; display: flex; align-items: center; gap: 4px; }
+    .pd-record-badge {
+        background: #0d6efd;
+        color: #fff;
+        font-size: 0.68rem;
+        font-weight: 700;
+        padding: 4px 12px;
+        border-radius: 20px;
+        white-space: nowrap;
+    }
+    .pd-record-body {
+        background: #fff;
+        border: 1px solid #e8ecf0;
+        border-radius: 10px;
+        padding: 14px 16px;
+        margin-bottom: 12px;
+        font-size: 0.88rem;
+    }
+    .pd-record-body-label { font-weight: 700; color: #1e2730; margin-bottom: 4px; font-size: 0.85rem; }
+    .pd-record-body-text { color: #6c757d; margin: 0; }
+    .pd-rx-block {
+        background: #fff;
+        border: 1px solid #e8ecf0;
+        border-left: 4px solid #00a896;
+        border-radius: 10px;
+        padding: 14px 16px;
+    }
+    .pd-rx-title {
+        font-weight: 800;
+        color: #00a896;
+        font-size: 0.85rem;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        margin-bottom: 12px;
+    }
+
+    /* Mobile */
+    @media (max-width: 600px) {
+        .pd-topbar { border-radius: 14px; padding: 14px 18px; }
+        .pd-appt-actions { width: 100%; justify-content: flex-start; }
+        .pd-appt-date { text-align: left; }
     }
 </style>
-<div class="row mt-4">
-    <!-- Sidebar -->
-    <div class="col-lg-3 col-md-4 mb-4">
-        <div class="profile-card text-center">
-            <div class="avatar-wrapper mb-3">
-                <div class="placeholder-avatar" style="background-image: url('{{ request.user.patient_profile.get_avatar_url }}'); background-size: cover; border: none; background-color: transparent;"></div>
-                <div class="status-dot"></div>
-            </div>
-            <h4 class="fw-bold mb-1" style="color: #0A3D62;">{{ request.user.username|upper }}</h4>
-            <p class="text-muted small mb-1">{{ request.user.email|default:"patient@telemd.com" }}</p>
+{% endblock %}
+
+{% block content %}
+<div class="pd-wrapper">
+
+    <!-- ══════════════════════════════════════
+         LEFT SIDEBAR
+    ══════════════════════════════════════ -->
+    <aside class="pd-sidebar">
+        <!-- Avatar -->
+        <div class="pd-avatar-ring">
+            <img src="{{ request.user.patient_profile.get_avatar_url }}"
+                 alt="{{ request.user.username }}"
+                 onerror="this.src='https://ui-avatars.com/api/?name={{ request.user.username }}&background=aeddf2&color=0A3D62&size=140'">
+            <div class="pd-online-dot"></div>
+        </div>
+
+        <!-- Name & Email -->
+        <div class="pd-name">{{ request.user.username|upper }}</div>
+        <div class="pd-email">{{ request.user.email|default:"patient@telemd.com" }}</div>
+
+        <!-- Badges -->
+        <div class="pd-badge-row">
             {% if request.user.patient_profile.age %}
-            <p class="mb-3"><span class="badge bg-light text-dark border rounded-pill px-3 py-1" style="font-size: 0.8rem; font-weight: 700;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="me-1"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>Age: {{ request.user.patient_profile.age }} yrs</span></p>
-            {% else %}
-            <p class="text-muted small mb-3"></p>
+            <span class="pd-badge-age">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                Age: {{ request.user.patient_profile.age }} yrs
+            </span>
             {% endif %}
-            
-            <div class="d-flex justify-content-center gap-2 mb-4">
-                <span class="badge-worker" style="background:#6c757d;"><svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>Patient</span>
-            </div>
-            
-            <hr class="text-muted opacity-25 mx-3 mb-4">
-            
-            <div class="row text-center mb-4 mt-2">
-                <div class="col-6 border-end">
-                    <div class="stat-num dark">{{ upcoming_visits_count|default:"0" }}</div>
-                    <div class="stat-label">Upcoming<br>Visits</div>
-                </div>
-                <div class="col-6">
-                    <div class="stat-num teal">{{ diagnosis_logs_count|default:"0" }}</div>
-                    <div class="stat-label">Diagnosis<br>Logs</div>
-                </div>
-            </div>
-            
-            <hr class="text-muted opacity-25 mx-3 mb-4">
-            
-            <a href="{% url 'edit_profile' %}" class="btn-edit-profile" style="text-decoration: none; display: flex; align-items: center; justify-content: center;">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
-                Edit Profile
-            </a>
+            <span class="pd-badge-role">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                Patient
+            </span>
         </div>
-    </div>
 
-    <!-- Main Content -->
-    <div class="col-lg-9 col-md-8">
-        <div class="search-card d-flex align-items-center justify-content-between mb-4">
-            <h5 class="fw-bold mb-0" style="color:#222;">Patient Hub</h5>
-            <div class="search-input-wrapper">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-                <input type="text" placeholder="Search records...">
+        <hr class="pd-divider">
+
+        <!-- Stats -->
+        <div class="pd-stats">
+            <div class="pd-stat">
+                <div class="pd-stat-num navy">{{ upcoming_visits_count|default:"0" }}</div>
+                <div class="pd-stat-label">Upcoming<br>Visits</div>
+            </div>
+            <div class="pd-stat">
+                <div class="pd-stat-num teal">{{ diagnosis_logs_count|default:"0" }}</div>
+                <div class="pd-stat-label">Diagnosis<br>Logs</div>
             </div>
         </div>
 
-        <div class="section-title-wrap">
-            <div class="section-icon">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
+        <hr class="pd-divider">
+
+        <!-- Edit Profile -->
+        <a href="{% url 'edit_profile' %}" class="pd-btn-edit">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+            Edit Profile
+        </a>
+    </aside>
+
+    <!-- ══════════════════════════════════════
+         MAIN CONTENT
+    ══════════════════════════════════════ -->
+    <main class="pd-main">
+
+        <!-- Top bar: title + search -->
+        <div class="pd-topbar">
+            <span class="pd-topbar-title">Patient Hub</span>
+            <div class="pd-search">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                <input type="text" id="pd-search-input" placeholder="Search records...">
             </div>
-            <h4 class="section-title">AI Triage & Diagnosis</h4>
         </div>
-        
-        <div class="row">
-            <div class="col-md-6 mb-3">
-                <div class="request-card h-100" style="border-color: #0A3D62;">
-                    <div class="request-meta d-flex flex-column h-100">
-                        <div class="d-flex align-items-center gap-3 mb-3">
-                            <div class="bg-light rounded p-2 text-primary">
-                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
-                            </div>
-                            <div>
-                                <h6 class="mb-0 fw-bold" style="color: #222;">Check New Symptoms</h6>
-                                <small class="text-muted">Analyze your risk for Malaria and Cholera</small>
-                            </div>
-                        </div>
-                        <div class="mt-auto">
-                            <a href="{% url 'symptom_checker' %}" class="btn-teal w-100 justify-content-center text-decoration-none">
-                                Ai - Auto Diagnosis
-                            </a>
-                        </div>
+
+        <!-- ─────────────────────────────────────
+             SECTION 1 : AI Triage & Diagnosis
+        ───────────────────────────────────── -->
+        <div class="pd-section-head">
+            <div class="pd-section-icon">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+            </div>
+            <h4 class="pd-section-title">AI Triage &amp; Diagnosis</h4>
+        </div>
+
+        <div class="pd-triage-grid">
+            <!-- Card 1: Check Symptoms -->
+            <div class="pd-triage-card">
+                <div class="pd-triage-card-top">
+                    <div class="pd-triage-icon">
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
                     </div>
-                </div>
-            </div>
-            
-            <div class="col-md-6 mb-3">
-                <div class="request-card h-100" style="border-color: #00a896;">
-                    <div class="request-meta d-flex flex-column h-100">
-                        <div class="d-flex align-items-center gap-3 mb-3">
-                            <div class="bg-light rounded p-2 text-success">
-                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.87 2.651l-7.79 7.791a5.657 5.657 0 0 0 8 8l7.79-7.79a5.657 5.657 0 1 0-8-8z"></path><line x1="14" y1="14" x2="10" y2="10"></line></svg>
-                            </div>
-                            <div>
-                                <h6 class="mb-0 fw-bold" style="color: #222;">Request Prescription</h6>
-                                <small class="text-muted">Directly consult a doctor for a medical regimen</small>
-                            </div>
-                        </div>
-                        <div class="mt-auto">
-                            <a href="{% url 'book_appointment' %}" class="btn w-100 fw-bold border-0 text-white" style="background:#00a896; border-radius: 20px; transition: 0.3s; padding:10px 15px;">
-                                Find a Doctor
-                            </a>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <hr class="text-muted opacity-25 my-4">
-
-        <div class="section-title-wrap">
-            <div class="section-icon">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-            </div>
-            <h4 class="section-title">Upcoming Appointments</h4>
-        </div>
-        
-        {% for appt in upcoming_visits %}
-        <div class="request-card mb-3">
-            <div class="appt-card-meta request-meta d-flex align-items-center justify-content-between">
-                <!-- Doctor Info -->
-                <div class="d-flex align-items-center gap-3">
-                    <img src="{{ appt.doctor.get_avatar_url }}" width="48" height="48" class="rounded-circle border" alt="Doctor Avatar">
                     <div>
-                        <h6 class="mb-0 fw-bold" style="color: #222;">Dr. {{ appt.doctor.user.get_full_name|default:appt.doctor.user.username }}</h6>
-                        <small class="text-muted">{{ appt.doctor.specialty }}</small>
+                        <div class="pd-triage-card-label">Check New Symptoms</div>
+                        <div class="pd-triage-card-desc">Analyze your risk for Malaria and Cholera</div>
                     </div>
                 </div>
-                <!-- Time & Actions -->
-                <div class="appt-actions d-flex align-items-center gap-2">
-                    <div class="appt-date text-end">
-                        <p class="mb-0 fw-bold text-dark" style="font-size: 0.82rem;">{{ appt.appointment_date|date:"M d, Y" }}</p>
-                        <small class="text-primary fw-bold">{{ appt.appointment_date|time:"h:i A" }}</small>
+                <a href="{% url 'symptom_checker' %}" class="pd-btn-triage">Ai - Auto Diagnosis</a>
+            </div>
+
+            <!-- Card 2: Request Prescription -->
+            <div class="pd-triage-card teal">
+                <div class="pd-triage-card-top">
+                    <div class="pd-triage-icon">
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.87 2.651l-7.79 7.791a5.657 5.657 0 0 0 8 8l7.79-7.79a5.657 5.657 0 1 0-8-8z"/><line x1="14" y1="14" x2="10" y2="10"/></svg>
                     </div>
-                    <a href="{% url 'chat_room' appt.doctor.user.id %}" class="btn border shadow-sm p-2 rounded-circle hover-lift" title="Chat">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#00a896" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-                    </a>
-                    <a href="{% url 'video_call_room' appt.room_name|default:appt.id %}?audio_only=1&ring=1" class="btn border shadow-sm p-2 px-3 rounded-pill fw-bold d-flex align-items-center gap-1" style="background: white; color: #0A3D62; font-size: 0.8rem;" title="Audio Call">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 2.59 3.4L15.3 15.3a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
-                        <span class="d-none d-sm-inline">Audio</span>
-                    </a>
-                    <a href="{% url 'video_call_room' appt.room_name|default:appt.id %}?ring=1" class="btn btn-teal p-2 px-3 rounded-pill fw-bold border-0 shadow-sm d-flex align-items-center gap-1" style="font-size: 0.8rem;" title="Video Call">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
-                        <span class="d-none d-sm-inline">Video</span>
-                    </a>
+                    <div>
+                        <div class="pd-triage-card-label">Request Prescription</div>
+                        <div class="pd-triage-card-desc">Directly consult a doctor for a medical regimen</div>
+                    </div>
                 </div>
+                <a href="{% url 'book_appointment' %}" class="pd-btn-triage">Find a Doctor</a>
+            </div>
+        </div>
+
+        <hr class="pd-hr">
+
+        <!-- ─────────────────────────────────────
+             SECTION 2 : Upcoming Appointments
+        ───────────────────────────────────── -->
+        <div class="pd-section-head">
+            <div class="pd-section-icon">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+            </div>
+            <h4 class="pd-section-title">Upcoming Appointments</h4>
+        </div>
+
+        {% for appt in upcoming_visits %}
+        <div class="pd-appt-card">
+            <div class="pd-appt-info">
+                <img src="{{ appt.doctor.get_avatar_url }}"
+                     width="48" height="48"
+                     style="border-radius:50%; border:1.5px solid #e0e0e0; flex-shrink:0;"
+                     alt="Doctor Avatar"
+                     onerror="this.src='https://ui-avatars.com/api/?name={{ appt.doctor.user.username }}&background=0A3D62&color=fff&size=96'">
+                <div>
+                    <div class="pd-appt-name">Dr. {{ appt.doctor.user.get_full_name|default:appt.doctor.user.username }}</div>
+                    <div class="pd-appt-specialty">{{ appt.doctor.specialty|default:"General Practitioner" }}</div>
+                </div>
+            </div>
+            <div class="pd-appt-actions">
+                <div class="pd-appt-date">
+                    <div class="pd-appt-date-main">{{ appt.appointment_date|date:"M d, Y" }}</div>
+                    <div class="pd-appt-date-time">{{ appt.appointment_date|time:"h:i A" }}</div>
+                </div>
+                <a href="{% url 'chat_room' appt.doctor.user.id %}" class="pd-btn-icon" title="Message Doctor">
+                    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                </a>
+                <a href="{% url 'video_call_room' appt.room_name|default:appt.id %}?audio_only=1" class="pd-btn-call" title="Audio Call">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 2.59 3.4L15.3 15.3a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+                    <span class="d-none d-sm-inline">Audio</span>
+                </a>
+                <a href="{% url 'video_call_room' appt.room_name|default:appt.id %}" class="pd-btn-video" title="Video Call">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
+                    <span class="d-none d-sm-inline">Video</span>
+                </a>
             </div>
         </div>
         {% empty %}
-        <div class="alert alert-light text-center py-4 border-dashed rounded-3">
-            <p class="mb-0 text-muted">No upcoming appointments scheduled yet.</p>
+        <div class="pd-empty-card">
+            No upcoming appointments scheduled yet.
         </div>
         {% endfor %}
 
-        <hr class="text-muted opacity-25 my-4">
-        
-        <div class="section-title-wrap">
-            <div class="section-icon">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+        <hr class="pd-hr">
+
+        <!-- ─────────────────────────────────────
+             SECTION 3 : Clinical Vault / Records
+        ───────────────────────────────────── -->
+        <div class="pd-section-head">
+            <div class="pd-section-icon">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
             </div>
-            <h4 class="section-title">Clinical Vault: E-Prescriptions & Records</h4>
+            <h4 class="pd-section-title">Clinical Vault: E-Prescriptions &amp; Records</h4>
         </div>
-        
+
         {% for record in medical_records %}
-        <div class="request-card mb-3 p-3 p-md-4" style="background-color: #f8fbff; border: 1px solid #d0e3ff;">
-            <div class="clinical-header d-flex justify-content-between align-items-start mb-3">
-                <div class="d-flex align-items-center gap-3">
-                    <img src="{{ record.doctor.get_avatar_url }}" width="44" height="44" class="rounded-circle border" alt="Doctor Avatar">
+        <div class="pd-record-card">
+            <div class="pd-record-header">
+                <div class="pd-record-doc">
+                    <img src="{{ record.doctor.get_avatar_url }}"
+                         width="44" height="44"
+                         style="border-radius:50%; border:1.5px solid #d0e3ff; flex-shrink:0;"
+                         alt="Doctor Avatar"
+                         onerror="this.src='https://ui-avatars.com/api/?name={{ record.doctor.user.username }}&background=0A3D62&color=fff&size=88'">
                     <div>
-                        <h6 class="mb-0 fw-bold" style="color: #0A3D62; font-size: 0.9rem;">Dr. {{ record.doctor.user.get_full_name|default:record.doctor.user.username }}</h6>
-                        <small class="text-muted"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="me-1"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>{{ record.created_at|date:"M d, Y" }}</small>
+                        <div class="pd-record-doc-name">Dr. {{ record.doctor.user.get_full_name|default:record.doctor.user.username }}</div>
+                        <div class="pd-record-doc-date">
+                            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                            {{ record.created_at|date:"M d, Y" }}
+                        </div>
                     </div>
                 </div>
-                <span class="badge bg-primary rounded-pill" style="font-size: 0.68rem; white-space: nowrap;">Clinical Record</span>
+                <span class="pd-record-badge">Clinical Record</span>
             </div>
-            
-            <div class="mb-3 px-3 py-2 bg-white rounded border">
-                <p class="mb-1 fw-bold text-dark" style="font-size: 0.85rem;">Diagnosis:</p>
-                <p class="mb-0 text-muted" style="font-size: 0.88rem;">{{ record.diagnosis }}</p>
+
+            <div class="pd-record-body">
+                <div class="pd-record-body-label">Diagnosis:</div>
+                <p class="pd-record-body-text">{{ record.diagnosis }}</p>
                 {% if record.notes %}
-                <hr class="my-2 opacity-25">
-                <p class="mb-1 fw-bold text-dark" style="font-size: 0.85rem;">Doctor's Notes:</p>
-                <p class="mb-0 text-muted" style="font-size: 0.88rem;">{{ record.notes }}</p>
+                <hr style="border:none; border-top:1px solid #eef0f3; margin:10px 0;">
+                <div class="pd-record-body-label">Doctor's Notes:</div>
+                <p class="pd-record-body-text">{{ record.notes }}</p>
                 {% endif %}
             </div>
-            
+
             {% if record.prescriptions.all %}
-            <div class="p-3 rounded border" style="background-color: #fff; border-left: 4px solid #00a896 !important;">
-                <h6 class="fw-bold mb-3 d-flex align-items-center gap-2" style="color: #00a896; font-size: 0.85rem;">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.87 2.651l-7.79 7.791a5.657 5.657 0 0 0 8 8l7.79-7.79a5.657 5.657 0 1 0-8-8z"></path><line x1="14" y1="14" x2="10" y2="10"></line></svg>
+            <div class="pd-rx-block">
+                <div class="pd-rx-title">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.87 2.651l-7.79 7.791a5.657 5.657 0 0 0 8 8l7.79-7.79a5.657 5.657 0 1 0-8-8z"/><line x1="14" y1="14" x2="10" y2="10"/></svg>
                     Issued E-Prescription
-                </h6>
+                </div>
                 {% for rx in record.prescriptions.all %}
-                <div class="mb-2 {% if not forloop.last %}border-bottom pb-2{% endif %}">
+                <div class="mb-2 {% if not forloop.last %}pb-2{% endif %}" style="{% if not forloop.last %}border-bottom:1px solid #eef0f3;{% endif %}">
                     <div class="row">
                         <div class="col-sm-6 mb-1 mb-sm-0">
-                            <span class="text-muted small d-block">Medication</span>
-                            <span class="fw-bold text-dark" style="font-size: 0.85rem;">{{ rx.drug_name }} ({{ rx.dosage }})</span>
+                            <span style="font-size:0.75rem; color:#9aa5b1; display:block;">Medication</span>
+                            <span style="font-weight:700; font-size:0.85rem; color:#1e2730;">{{ rx.drug_name }} ({{ rx.dosage }})</span>
                         </div>
                         <div class="col-sm-6">
-                            <span class="text-muted small d-block">Regimen</span>
-                            <span class="fw-bold text-dark" style="font-size: 0.85rem;">{{ rx.frequency }} for {{ rx.duration }}</span>
+                            <span style="font-size:0.75rem; color:#9aa5b1; display:block;">Regimen</span>
+                            <span style="font-weight:700; font-size:0.85rem; color:#1e2730;">{{ rx.frequency }} for {{ rx.duration }}</span>
                         </div>
                     </div>
                     {% if rx.instructions %}
-                    <div class="mt-2 text-muted small fst-italic">📝 "{{ rx.instructions }}"</div>
+                    <div style="margin-top:8px; font-size:0.8rem; color:#6c757d; font-style:italic;">📝 "{{ rx.instructions }}"</div>
                     {% endif %}
                     {% if rx.digital_signature %}
-                    <div class="mt-2 text-success small fw-bold d-flex align-items-center gap-1">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                    <div style="margin-top:8px; font-size:0.8rem; font-weight:700; color:#27ae60; display:flex; align-items:center; gap:5px;">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
                         Digitally Signed by Doctor
                     </div>
                     {% endif %}
@@ -231,11 +684,11 @@
             {% endif %}
         </div>
         {% empty %}
-        <div class="alert alert-light text-center py-4 border-dashed rounded-3">
-            <p class="mb-0 text-muted">No clinical records available.</p>
+        <div class="pd-empty-card">
+            No clinical records available.
         </div>
         {% endfor %}
 
-        <hr class="text-muted opacity-25 my-4">
+    </main>
 </div>
 {% endblock %}

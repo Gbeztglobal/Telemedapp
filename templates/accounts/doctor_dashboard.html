@@ -4,244 +4,653 @@
 {% block body_class %}bg-light-blue{% endblock %}
 {% block nav_class %}solid-nav{% endblock %}
 
-{% block content %}
+{% block extra_css %}
 <style>
-    @media (max-width: 767.98px) {
-        .doc-search-card { flex-direction: column !important; gap: 10px !important; }
-        .doc-search-card .search-input-wrapper { width: 100%; }
-        .doc-search-card .search-input-wrapper input { width: 100%; }
-        .section-title { font-size: 0.95rem !important; }
+    /* ── Page Background ── */
+    .bg-light-blue {
+        background: #7eaef7 !important;
+        color: #333 !important;
+    }
 
-        /* Consultation request cards */
-        .req-card-meta { flex-direction: column !important; gap: 12px !important; align-items: flex-start !important; }
-        .req-actions { width: 100% !important; }
-        .req-actions .d-flex { width: 100%; }
+    /* ── Layout ── */
+    .dd-wrapper {
+        display: grid;
+        grid-template-columns: 280px 1fr;
+        gap: 24px;
+        align-items: start;
+        margin-top: 24px;
+        margin-bottom: 48px;
+    }
+    @media (max-width: 900px) {
+        .dd-wrapper { grid-template-columns: 1fr; }
+    }
 
-        /* Appointment cards */
-        .appt-doc-meta { flex-direction: column !important; gap: 12px !important; align-items: flex-start !important; }
-        .appt-doc-actions { flex-wrap: wrap; gap: 6px !important; width: 100%; justify-content: flex-start !important; }
-        .appt-doc-actions a { font-size: 0.78rem !important; }
-        .appt-doc-actions .btn-session-text { display: none; }
+    /* ── Sidebar Card ── */
+    .dd-sidebar {
+        background: #fff;
+        border-radius: 18px;
+        padding: 32px 24px 24px;
+        box-shadow: 0 2px 16px rgba(0,0,0,0.06);
+        text-align: center;
+    }
 
-        /* Patient directory cards */
-        .pat-card { padding: 16px !important; }
-        .pat-card .pat-info-row h5 { font-size: 0.95rem !important; }
-        .pat-card .pat-footer { flex-direction: column !important; gap: 10px !important; align-items: flex-start !important; }
-        .pat-card .pat-footer > a { width: 100% !important; justify-content: center !important; }
-        .pat-card .pat-footer .pat-contact-btns { justify-content: flex-start !important; }
+    /* Avatar */
+    .dd-avatar-ring {
+        width: 130px;
+        height: 130px;
+        border-radius: 50%;
+        border: 4px solid #0A3D62;
+        padding: 5px;
+        margin: 0 auto 16px;
+        position: relative;
+        background: #c9b8e8;
+    }
+    .dd-avatar-ring img {
+        width: 100%;
+        height: 100%;
+        border-radius: 50%;
+        object-fit: cover;
+        background: #c9b8e8;
+    }
+    .dd-online-dot {
+        position: absolute;
+        bottom: 6px;
+        right: 6px;
+        width: 18px;
+        height: 18px;
+        background: #27ae60;
+        border: 3px solid #fff;
+        border-radius: 50%;
+    }
+
+    /* Doctor info */
+    .dd-name {
+        font-size: 1.25rem;
+        font-weight: 800;
+        color: #0A3D62;
+        margin-bottom: 4px;
+    }
+    .dd-email {
+        font-size: 0.82rem;
+        color: #888;
+        margin-bottom: 18px;
+    }
+
+    /* Badges row */
+    .dd-badge-row {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 22px;
+    }
+    .dd-badge-worker {
+        background: #0d6efd;
+        color: #fff;
+        font-size: 0.78rem;
+        font-weight: 700;
+        padding: 7px 18px;
+        border-radius: 20px;
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+    }
+    .dd-badge-phone {
+        background: #fff;
+        color: #555;
+        border: 1px solid #dde1e7;
+        font-size: 0.78rem;
+        font-weight: 600;
+        padding: 6px 16px;
+        border-radius: 20px;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+    }
+
+    /* Divider */
+    .dd-divider { border: none; border-top: 1px solid #eef0f3; margin: 18px 0; }
+
+    /* Stats */
+    .dd-stats {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 0;
+        margin-bottom: 18px;
+    }
+    .dd-stat {
+        padding: 8px 0;
+        text-align: center;
+    }
+    .dd-stat:first-child { border-right: 1px solid #eef0f3; }
+    .dd-stat-num {
+        font-size: 2rem;
+        font-weight: 900;
+        line-height: 1;
+        margin-bottom: 5px;
+    }
+    .dd-stat-num.navy { color: #0A3D62; }
+    .dd-stat-num.teal { color: #00a896; }
+    .dd-stat-label {
+        font-size: 0.65rem;
+        font-weight: 700;
+        color: #9aa5b1;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        line-height: 1.4;
+    }
+
+    /* Edit Profile button */
+    .dd-btn-edit {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        width: 100%;
+        padding: 11px;
+        background: #fdfdfd;
+        border: 1px solid #dde1e7;
+        border-radius: 10px;
+        color: #555;
+        font-weight: 700;
+        font-size: 0.88rem;
+        text-decoration: none;
+        transition: background 0.18s;
+    }
+    .dd-btn-edit:hover { background: #f0f2f5; color: #333; }
+
+    /* ── Main Content ── */
+    .dd-main { display: flex; flex-direction: column; gap: 0; }
+
+    /* Search / Header bar */
+    .dd-topbar {
+        background: #fff;
+        border-radius: 50px;
+        padding: 14px 28px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        box-shadow: 0 2px 12px rgba(0,0,0,0.04);
+        margin-bottom: 28px;
+        gap: 16px;
+        flex-wrap: wrap;
+    }
+    .dd-topbar-title {
+        font-size: 1.1rem;
+        font-weight: 800;
+        color: #1e2730;
+        white-space: nowrap;
+    }
+    .dd-search {
+        position: relative;
+        flex: 1;
+        max-width: 340px;
+        min-width: 200px;
+    }
+    .dd-search svg {
+        position: absolute;
+        left: 14px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: #aaa;
+    }
+    .dd-search input {
+        width: 100%;
+        background: #f7f8fb;
+        border: 1.5px solid #e8eaed;
+        border-radius: 30px;
+        padding: 9px 16px 9px 42px;
+        font-size: 0.85rem;
+        color: #555;
+        font-family: 'Outfit', sans-serif;
+        outline: none;
+        transition: border-color 0.2s;
+    }
+    .dd-search input:focus { border-color: #00a896; }
+    .dd-search input::placeholder { color: #bbb; }
+
+    /* Section header */
+    .dd-section-head {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        margin-bottom: 14px;
+        margin-top: 6px;
+    }
+    .dd-section-icon {
+        width: 46px;
+        height: 46px;
+        min-width: 46px;
+        border-radius: 10px;
+        background: rgba(0, 168, 150, 0.1);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #00a896;
+    }
+    .dd-section-title {
+        font-size: 1.1rem;
+        font-weight: 800;
+        color: #0A3D62;
+        margin: 0;
+    }
+    .dd-hr { border: none; border-top: 1px solid #eef0f3; margin: 24px 0; }
+
+    /* Empty state card */
+    .dd-empty-card {
+        background: #fff;
+        border-radius: 14px;
+        padding: 32px 24px;
+        text-align: center;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.04);
+        color: #9aa5b1;
+        font-size: 0.9rem;
+    }
+    .dd-empty-card svg { display: block; margin: 0 auto 10px; opacity: 0.55; }
+
+    /* Consultation request cards */
+    .dd-req-card {
+        background: #fff;
+        border: 2px solid #ffd000;
+        border-radius: 13px;
+        padding: 18px 22px;
+        margin-bottom: 14px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.03);
+    }
+    .dd-req-meta {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        flex-wrap: wrap;
+    }
+    .dd-req-info { display: flex; align-items: center; gap: 12px; }
+    .dd-req-name { font-weight: 700; color: #1e2730; font-size: 0.95rem; margin-bottom: 2px; }
+    .dd-req-time { font-size: 0.78rem; color: #9aa5b1; display: flex; align-items: center; gap: 4px; }
+    .dd-req-actions { display: flex; flex-direction: column; gap: 8px; align-items: flex-end; }
+    .dd-req-btns { display: flex; gap: 8px; }
+    .dd-req-note {
+        background: #fafafa;
+        border: 1px solid #f0f0f0;
+        border-radius: 8px;
+        padding: 12px 16px;
+        color: #666;
+        font-size: 0.88rem;
+        margin-top: 14px;
+    }
+    .dd-btn-approve {
+        background: #00a896;
+        color: #fff;
+        border: none;
+        padding: 8px 18px;
+        border-radius: 20px;
+        font-weight: 700;
+        font-size: 0.82rem;
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        text-decoration: none;
+        transition: background 0.18s;
+    }
+    .dd-btn-approve:hover { background: #008f7f; color: #fff; }
+    .dd-btn-decline {
+        background: rgba(220,53,69,0.09);
+        color: #dc3545;
+        border: none;
+        padding: 8px 18px;
+        border-radius: 20px;
+        font-weight: 700;
+        font-size: 0.82rem;
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        text-decoration: none;
+        transition: background 0.18s;
+    }
+    .dd-btn-decline:hover { background: rgba(220,53,69,0.18); color: #dc3545; }
+
+    /* Appointment cards */
+    .dd-appt-card {
+        background: #fff;
+        border-radius: 13px;
+        padding: 16px 20px;
+        margin-bottom: 12px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.03);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        flex-wrap: wrap;
+    }
+    .dd-appt-info { display: flex; align-items: center; gap: 12px; }
+    .dd-appt-name { font-weight: 700; color: #1e2730; font-size: 0.92rem; margin-bottom: 2px; }
+    .dd-appt-date { font-size: 0.78rem; color: #9aa5b1; display: flex; align-items: center; gap: 4px; }
+    .dd-appt-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .dd-btn-icon {
+        width: 38px; height: 38px;
+        border-radius: 50%;
+        border: 1.5px solid #e0e0e0;
+        background: #fff;
+        display: flex; align-items: center; justify-content: center;
+        color: #00a896;
+        transition: background 0.18s, transform 0.18s;
+        text-decoration: none;
+    }
+    .dd-btn-icon:hover { background: #f0faf9; transform: translateY(-2px); }
+    .dd-btn-session {
+        background: #00a896;
+        color: #fff;
+        border: none;
+        border-radius: 20px;
+        padding: 8px 16px;
+        font-size: 0.8rem;
+        font-weight: 700;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        text-decoration: none;
+        transition: background 0.18s;
+    }
+    .dd-btn-session:hover { background: #008f7f; color: #fff; }
+    .dd-btn-prescribe {
+        background: transparent;
+        color: #0d6efd;
+        border: 1.5px solid #c5d8ff;
+        border-radius: 20px;
+        padding: 7px 14px;
+        font-size: 0.8rem;
+        font-weight: 700;
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        text-decoration: none;
+        transition: background 0.18s;
+    }
+    .dd-btn-prescribe:hover { background: #eef3ff; }
+
+    /* Patient directory */
+    .dd-pat-card {
+        background: #fff;
+        border-radius: 14px;
+        padding: 20px 22px;
+        border-left: 5px solid #0A3D62;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.04);
+        height: 100%;
+    }
+    .dd-pat-name { font-weight: 800; color: #0A3D62; font-size: 0.97rem; margin-bottom: 4px; }
+    .dd-pat-contact { font-size: 0.75rem; color: #9aa5b1; display: flex; align-items: center; gap: 4px; }
+    .dd-pat-footer {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-top: 16px;
+        padding-top: 14px;
+        border-top: 1px solid #f0f2f5;
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+    .dd-btn-record {
+        background: #eef3ff;
+        color: #0d6efd;
+        border: none;
+        border-radius: 20px;
+        padding: 7px 14px;
+        font-size: 0.8rem;
+        font-weight: 700;
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        text-decoration: none;
+        transition: background 0.18s;
+    }
+    .dd-btn-record:hover { background: #dce8ff; }
+    .dd-pat-icon-btns { display: flex; align-items: center; gap: 6px; }
+
+    /* mobile */
+    @media (max-width: 600px) {
+        .dd-topbar { border-radius: 14px; padding: 14px 18px; }
+        .dd-req-actions { align-items: flex-start; width: 100%; }
+        .dd-req-btns { width: 100%; }
+        .dd-btn-approve, .dd-btn-decline { flex: 1; justify-content: center; }
+        .dd-appt-actions { width: 100%; justify-content: flex-start; }
+        .dd-btn-session span { display: none; }
     }
 </style>
-<div class="row mt-4">
-    <!-- Sidebar -->
-    <div class="col-lg-3 col-md-4 mb-4">
-        <div class="profile-card text-center">
-            <div class="avatar-wrapper mb-3">
-                <div class="placeholder-avatar" style="background-image: url('{{ request.user.doctor_profile.get_avatar_url }}'); background-size: cover; border: none; background-color: transparent;"></div>
-                <div class="status-dot"></div>
-            </div>
-            <h4 class="fw-bold mb-1" style="color: #0A3D62;">Dr. {{ request.user.username|upper }}</h4>
-            <p class="text-muted small mb-3">{{ request.user.email|default:"doctor@telemd.com" }}</p>
-            
-            <div class="d-flex justify-content-center gap-2 mb-4 flex-wrap">
-                <span class="badge-worker"><svg width="12" height="12" viewBox="0 0 24 24" fill="#ffca28" stroke="#ffca28" stroke-width="1"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>Health Worker</span>
-                <span class="badge-phone"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#666" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 2.59 3.4L15.3 15.3a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>{{ request.user.doctor_profile.phone_number|default:"09087654334" }}</span>
-            </div>
-            
-            <hr class="text-muted opacity-25 mx-3 mb-4">
-            
-            <div class="row text-center mb-4 mt-2">
-                <div class="col-6 border-end" style="border-right: 1px solid #e0e0e0 !important;">
-                    <div class="stat-num dark">{{ pending_requests_count|default:"0" }}</div>
-                    <div class="stat-label">Pending<br>Requests</div>
-                </div>
-                <div class="col-6">
-                    <div class="stat-num teal">{{ active_patients_count|default:"0" }}</div>
-                    <div class="stat-label">Active<br>Patients</div>
-                </div>
-            </div>
-            
-            <hr class="text-muted opacity-25 mx-3 mb-4">
-            
-            <a href="{% url 'edit_profile' %}" class="btn-edit-profile" style="text-decoration: none; display: flex; align-items: center; justify-content: center;">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
-                Edit Profile
-            </a>
-        </div>
-    </div>
+{% endblock %}
 
-    <!-- Main Content -->
-    <div class="col-lg-9 col-md-8">
-        <div class="doc-search-card search-card d-flex align-items-center justify-content-between mb-4">
-            <h5 class="fw-bold mb-0" style="color:#222;">Clinical Command Center</h5>
-            <div class="search-input-wrapper">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-                <input type="text" placeholder="Search patients or requests...">
-            </div>
+{% block content %}
+<div class="dd-wrapper">
+
+    <!-- ══════════════════════════════════════
+         LEFT SIDEBAR
+    ══════════════════════════════════════ -->
+    <aside class="dd-sidebar">
+        <!-- Avatar -->
+        <div class="dd-avatar-ring">
+            <img src="{{ request.user.doctor_profile.get_avatar_url }}"
+                 alt="Dr. {{ request.user.username }}"
+                 onerror="this.src='https://ui-avatars.com/api/?name={{ request.user.username }}&background=c9b8e8&color=0A3D62&size=140'">
+            <div class="dd-online-dot"></div>
         </div>
 
-        <!-- ═══ CONSULTATION REQUESTS ═══ -->
-        <div class="section-title-wrap">
-            <div class="section-icon">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16c0 1.1.9 2 2 2h12a2 2 0 0 0 2-2V8l-6-6z"/><path d="M14 3v5h5M12 18v-6M9 15h6"/></svg>
-            </div>
-            <h4 class="section-title">Action Required: Consultation Requests</h4>
+        <!-- Name & Email -->
+        <div class="dd-name">Dr. {{ request.user.username|upper }}</div>
+        <div class="dd-email">{{ request.user.email|default:"doctor@telemd.com" }}</div>
+
+        <!-- Badges -->
+        <div class="dd-badge-row">
+            <span class="dd-badge-worker">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="#ffca28" stroke="#ffca28" stroke-width="1"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                Health Worker
+            </span>
+            <span class="dd-badge-phone">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#888" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 2.59 3.4L15.3 15.3a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+                {{ request.user.doctor_profile.phone_number|default:"08076544242" }}
+            </span>
         </div>
-        
+
+        <hr class="dd-divider">
+
+        <!-- Stats -->
+        <div class="dd-stats">
+            <div class="dd-stat">
+                <div class="dd-stat-num navy">{{ pending_requests_count|default:"0" }}</div>
+                <div class="dd-stat-label">Pending<br>Requests</div>
+            </div>
+            <div class="dd-stat">
+                <div class="dd-stat-num teal">{{ active_patients_count|default:"0" }}</div>
+                <div class="dd-stat-label">Active<br>Patients</div>
+            </div>
+        </div>
+
+        <hr class="dd-divider">
+
+        <!-- Edit Profile -->
+        <a href="{% url 'edit_profile' %}" class="dd-btn-edit">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+            Edit Profile
+        </a>
+    </aside>
+
+    <!-- ══════════════════════════════════════
+         MAIN CONTENT
+    ══════════════════════════════════════ -->
+    <main class="dd-main">
+
+        <!-- Top bar: title + search -->
+        <div class="dd-topbar">
+            <span class="dd-topbar-title">Clinical Command Center</span>
+            <div class="dd-search">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                <input type="text" id="dd-search-input" placeholder="Search patients or requests...">
+            </div>
+        </div>
+
+        <!-- ─────────────────────────────────────
+             SECTION 1 : Consultation Requests
+        ───────────────────────────────────── -->
+        <div class="dd-section-head">
+            <div class="dd-section-icon">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16c0 1.1.9 2 2 2h12a2 2 0 0 0 2-2V8l-6-6z"/><path d="M14 3v5h5M12 18v-6M9 15h6"/></svg>
+            </div>
+            <h4 class="dd-section-title">Action Required: Consultation Requests</h4>
+        </div>
+
         {% if pending_requests %}
             {% for req in pending_requests %}
-            <div class="request-card">
-                <div class="req-card-meta request-meta d-flex align-items-center justify-content-between">
-                    <div class="d-flex align-items-center gap-3">
-                        <img src="https://ui-avatars.com/api/?name={{ req.patient.user.username }}&background=1e2a3b&color=fff" alt="" width="44" height="44" class="rounded-circle">
+            <div class="dd-req-card">
+                <div class="dd-req-meta">
+                    <div class="dd-req-info">
+                        <img src="https://ui-avatars.com/api/?name={{ req.patient.user.username }}&background=1e2a3b&color=fff"
+                             alt="{{ req.patient.user.username }}"
+                             width="44" height="44"
+                             style="border-radius:50%; flex-shrink:0;">
                         <div>
-                            <h6 class="mb-0 fw-bold" style="color: #222;">{{ req.patient.user.username }}</h6>
-                            <small class="text-muted d-flex align-items-center gap-1">
-                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                            <div class="dd-req-name">{{ req.patient.user.username }}</div>
+                            <div class="dd-req-time">
+                                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
                                 {{ req.created_at|timesince }} ago
-                            </small>
+                            </div>
                         </div>
                     </div>
-                    <div class="req-actions d-flex flex-column gap-2">
+                    <div class="dd-req-actions">
                         {% if "[URGENT TRIAGE NEEDED]" in req.notes %}
-                        <span class="badge bg-danger rounded-pill px-3 py-2 fw-bold d-flex align-items-center justify-content-center gap-1" style="font-size: 0.75rem;">
-                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+                        <span style="background:#dc3545; color:#fff; font-size:0.72rem; font-weight:700; padding:4px 12px; border-radius:20px; display:inline-flex; align-items:center; gap:4px;">
+                            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
                             URGENT
                         </span>
                         {% endif %}
-                        <div class="d-flex gap-2">
-                            <a href="{% url 'update_appointment_status' req.id 'APPROVED' %}" class="btn-teal flex-fill justify-content-center text-decoration-none" style="font-size: 0.82rem;">
-                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                        <div class="dd-req-btns">
+                            <a href="{% url 'update_appointment_status' req.id 'APPROVED' %}" class="dd-btn-approve">
+                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
                                 Approve
                             </a>
-                            <a href="{% url 'update_appointment_status' req.id 'CANCELLED' %}" class="btn btn-outline-danger flex-fill justify-content-center border-0" style="background: rgba(220,53,69,0.1); font-weight: 600; font-size: 0.82rem;">
-                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                            <a href="{% url 'update_appointment_status' req.id 'CANCELLED' %}" class="dd-btn-decline">
+                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
                                 Decline
                             </a>
                         </div>
                     </div>
                 </div>
                 {% if req.notes %}
-                <div class="request-quote">
-                    "{{ req.notes }}"
-                </div>
+                <div class="dd-req-note">"{{ req.notes }}"</div>
                 {% endif %}
             </div>
             {% endfor %}
         {% else %}
-            <div class="alert alert-light border text-center text-muted p-4 rounded-3">
-                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="mb-2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
-                <p class="mb-0">No pending requests required for action right now.</p>
-            </div>
+        <div class="dd-empty-card">
+            <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#9aa5b1" stroke-width="1.5">
+                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+                <polyline points="22 4 12 14.01 9 11.01"/>
+            </svg>
+            No pending requests required for action right now.
+        </div>
         {% endif %}
 
-        <hr class="text-muted opacity-25 my-4">
+        <hr class="dd-hr">
 
-        <!-- ═══ UPCOMING APPOINTMENTS ═══ -->
-        <div class="section-title-wrap">
-            <div class="section-icon">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+        <!-- ─────────────────────────────────────
+             SECTION 2 : Upcoming Appointments
+        ───────────────────────────────────── -->
+        <div class="dd-section-head">
+            <div class="dd-section-icon">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
             </div>
-            <h4 class="section-title">Upcoming Appointments</h4>
+            <h4 class="dd-section-title">Upcoming Appointments</h4>
         </div>
-        
+
         {% for appt in upcoming_visits %}
-        <div class="request-card mb-3 p-3">
-            <div class="appt-doc-meta request-meta d-flex justify-content-between align-items-center">
-                <div class="d-flex align-items-center gap-3">
-                    <img src="{{ appt.patient.get_avatar_url }}" width="44" height="44" class="rounded-circle border" alt="Patient Avatar">
-                    <div>
-                        <h6 class="mb-0 fw-bold" style="color: #222; font-size: 0.9rem;">{{ appt.patient.user.get_full_name|default:appt.patient.user.username|upper }}</h6>
-                        <small class="text-muted" style="font-size: 0.75rem;">
-                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-                            {{ appt.appointment_date|date:"M d, Y h:i A" }}
-                        </small>
+        <div class="dd-appt-card">
+            <div class="dd-appt-info">
+                <img src="{{ appt.patient.get_avatar_url }}"
+                     width="46" height="46"
+                     style="border-radius:50%; border:1.5px solid #e0e0e0; flex-shrink:0;"
+                     alt="Patient Avatar">
+                <div>
+                    <div class="dd-appt-name">{{ appt.patient.user.get_full_name|default:appt.patient.user.username|upper }}</div>
+                    <div class="dd-appt-date">
+                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                        {{ appt.appointment_date|date:"M d, Y h:i A" }}
                     </div>
                 </div>
-                <div class="appt-doc-actions d-flex align-items-center gap-2">
-                    <a href="{% url 'chat_room' appt.patient.user.id %}" class="btn border shadow-sm p-2 rounded-circle hover-lift text-teal" title="Message">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-                    </a>
-                    <a href="{% url 'video_call_room' appt.room_name|default:appt.id %}?ring=1" class="btn btn-teal p-2 px-3 rounded-pill fw-bold border-0 shadow-sm d-flex align-items-center gap-1" style="font-size: 0.8rem;" title="Video Call">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
-                        <span class="btn-session-text">Start Session</span>
-                    </a>
-                    <a href="{% url 'create_medical_record' appt.id %}" class="btn btn-outline-primary border p-2 px-3 rounded-pill fw-bold shadow-sm d-flex align-items-center gap-1" style="font-size: 0.8rem;" title="Prescribe">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
-                        <span class="d-none d-sm-inline">Prescribe</span>
-                    </a>
-                </div>
+            </div>
+            <div class="dd-appt-actions">
+                <a href="{% url 'chat_room' appt.patient.user.id %}" class="dd-btn-icon" title="Message Patient">
+                    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                </a>
+                <a href="{% url 'video_call_room' appt.room_name|default:appt.id %}" class="dd-btn-session" title="Start Video Session">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
+                    <span>Start Session</span>
+                </a>
+                <a href="{% url 'create_medical_record' appt.id %}" class="dd-btn-prescribe" title="Create Medical Record">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+                    Prescribe
+                </a>
             </div>
         </div>
         {% empty %}
-        <div class="alert alert-light border text-center py-4 rounded-3 text-muted">
+        <div class="dd-empty-card">
             No upcoming approved appointments.
         </div>
         {% endfor %}
 
-        <hr class="text-muted opacity-25 my-4">
+        <hr class="dd-hr">
 
-        <!-- ═══ PATIENT DIRECTORY ═══ -->
-        <div class="section-title-wrap">
-            <div class="section-icon">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        <!-- ─────────────────────────────────────
+             SECTION 3 : Patient Directory
+        ───────────────────────────────────── -->
+        <div class="dd-section-head">
+            <div class="dd-section-icon">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
             </div>
-            <h4 class="section-title">Patient Directory</h4>
+            <h4 class="dd-section-title">Patient Directory</h4>
         </div>
-        
-        <div class="row">
+
+        <div class="row g-3">
             {% for pat in active_patients %}
-            <div class="col-md-6 mb-3">
-                <div class="pat-card card p-3 p-md-4 border-0 shadow-sm rounded-4 h-100" style="border-left: 5px solid #0A3D62 !important;">
-                    <div class="d-flex flex-column h-100">
-                        <div class="pat-info-row d-flex align-items-center gap-3 mb-3">
-                            <img src="{{ pat.get_avatar_url }}" width="50" height="50" class="rounded-circle border shadow-sm" alt="">
-                            <div style="min-width: 0;">
-                                <h5 class="mb-1 fw-bold" style="color: #0A3D62; font-size: 1rem;">{{ pat.user.get_full_name|default:pat.user.username|title }}</h5>
-                                <div class="d-flex flex-column gap-1">
-                                    <small class="text-muted d-flex align-items-center gap-1 text-truncate" style="font-size: 0.75rem;">
-                                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink:0;"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 2.59 3.4L15.3 15.3a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg> 
-                                        {{ pat.phone_number|default:"No Phone" }}
-                                    </small>
-                                    <small class="text-muted d-flex align-items-center gap-1 text-truncate" style="font-size: 0.75rem;">
-                                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink:0;"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
-                                        {{ pat.user.email|default:"No Email" }}
-                                    </small>
-                                </div>
+            <div class="col-md-6">
+                <div class="dd-pat-card">
+                    <div style="display:flex; align-items:center; gap:12px;">
+                        <img src="{{ pat.get_avatar_url }}" width="50" height="50"
+                             style="border-radius:50%; border:1.5px solid #e0e0e0; flex-shrink:0;" alt="">
+                        <div style="min-width:0;">
+                            <div class="dd-pat-name">{{ pat.user.get_full_name|default:pat.user.username|title }}</div>
+                            <div class="dd-pat-contact" style="margin-bottom:3px;">
+                                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink:0;"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 2.59 3.4L15.3 15.3a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+                                <span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">{{ pat.phone_number|default:"No Phone" }}</span>
+                            </div>
+                            <div class="dd-pat-contact">
+                                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink:0;"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+                                <span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">{{ pat.user.email|default:"No Email" }}</span>
                             </div>
                         </div>
-                        
-                        <div class="mt-auto">
-                            <hr class="text-muted opacity-10 my-3">
-                            <div class="pat-footer d-flex align-items-center justify-content-between">
-                                <!-- Patient Record Button -->
-                                <a href="{% url 'patient_medical_record' pat.id %}" class="btn btn-sm fw-bold border-0 text-primary bg-light rounded-pill px-3 py-2 d-flex align-items-center gap-2 text-decoration-none" style="font-size: 0.8rem;">
-                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
-                                    Clinical Record
-                                </a>
-                                
-                                <div class="pat-contact-btns d-flex align-items-center gap-2">
-                                    <a href="{% url 'chat_room' pat.user.id %}" class="btn border shadow-sm rounded-circle d-flex align-items-center justify-content-center" style="width: 36px; height: 36px; color: #00a896; background: #fff;" title="Direct Message">
-                                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-                                    </a>
-                                    <a href="/consultations/call/{{ request.user.id }}_{{ pat.user.id }}/?audio_only=1" class="btn shadow-sm border rounded-circle d-flex align-items-center justify-content-center" style="width: 36px; height: 36px; color: #0A3D62; background: #fff;" title="Audio Call">
-                                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 2.59 3.4L15.3 15.3a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
-                                    </a>
-                                    <a href="/consultations/call/{{ request.user.id }}_{{ pat.user.id }}/" class="btn shadow-sm rounded-circle d-flex align-items-center justify-content-center border-0" style="width: 36px; height: 36px; color: #fff; background: #00a896;" title="Video Call">
-                                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
-                                    </a>
-                                </div>
-                            </div>
+                    </div>
+                    <div class="dd-pat-footer">
+                        <a href="{% url 'patient_medical_record' pat.id %}" class="dd-btn-record">
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+                            Clinical Record
+                        </a>
+                        <div class="dd-pat-icon-btns">
+                            <a href="{% url 'chat_room' pat.user.id %}" class="dd-btn-icon" title="Message" style="color:#00a896;">
+                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                            </a>
+                            <a href="/consultations/call/{{ request.user.id }}_{{ pat.user.id }}/?audio_only=1" class="dd-btn-icon" title="Audio Call" style="color:#0A3D62;">
+                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 2.59 3.4L15.3 15.3a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+                            </a>
+                            <a href="/consultations/call/{{ request.user.id }}_{{ pat.user.id }}/" class="dd-btn-icon" title="Video Call" style="background:#00a896; color:#fff; border-color:#00a896;">
+                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
+                            </a>
                         </div>
                     </div>
                 </div>
             </div>
             {% empty %}
-            <div class="col-12 text-center text-muted py-4">
-                No active patients yet.
+            <div class="col-12">
+                <div class="dd-empty-card">No active patients yet.</div>
             </div>
             {% endfor %}
         </div>
 
-    </div>
+    </main>
 </div>
 {% endblock %}
