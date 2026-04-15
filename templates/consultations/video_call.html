@@ -9,7 +9,7 @@
      PAGE BACKGROUND
   ═══════════════════════════════════════════ */
   .vc-page-bg {
-    background: #0d1117 !important;
+    background: #e8f4fb !important;
   }
 
   /* ═══════════════════════════════════════════
@@ -52,11 +52,11 @@
      VIDEO CARD
   ═══════════════════════════════════════════ */
   .vc-card {
-    background: #111318;
+    background: #fff;
     border-radius: 16px;
     position: relative;
     overflow: hidden;
-    box-shadow: 0 8px 40px rgba(0,0,0,0.5);
+    box-shadow: 0 8px 40px rgba(0,0,0,0.08);
     /* Desktop/tablet: fill available height */
     height: 100%;
     min-height: 400px;
@@ -80,7 +80,7 @@
   #remoteVideo {
     width: 100%; height: 100%;
     object-fit: cover; display: block;
-    background: #111318;
+    background: #fff;
   }
 
   /* ── Waiting overlay ── */
@@ -600,6 +600,7 @@
 
   /* ── State ───────────────────────────────────────────────────── */
   let localStream       = null;
+  let remoteStream      = new MediaStream();
   let peerConn          = null;
   let micOn = true, camOn = true;
   let iceCandidateQueue = [];   // buffer candidates until remote desc is set
@@ -740,6 +741,7 @@
       }
     }
     localVideo.srcObject = localStream;
+    localVideo.play().catch(e => console.warn('Local autoplay prevent:', e));
     _streamReady();   // signal other paths waiting for media
   }
 
@@ -754,9 +756,15 @@
       if (candidate) send({ action: 'new-ice-candidate', candidate });
     };
 
-    peerConn.ontrack = ({ streams }) => {
-      if (remoteVideo.srcObject !== streams[0])
-        remoteVideo.srcObject = streams[0];
+    peerConn.ontrack = (event) => {
+      if (event.track) {
+        remoteStream.addTrack(event.track);
+        if (remoteVideo.srcObject !== remoteStream) {
+          remoteVideo.srcObject = remoteStream;
+        }
+        // Force play to fix iOS Safari/Mobile strict autoplay drop (black screen)
+        remoteVideo.play().catch(e => console.warn('Remote video autoplay prevented:', e));
+      }
       waitingOverlay.style.display = 'none';
       setStatus('🔒 Encrypted Session Active', true);
       startTimer();
