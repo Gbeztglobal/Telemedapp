@@ -192,7 +192,7 @@
     overflow: hidden; z-index: 20; cursor: pointer;
     border: 2px solid rgba(255,255,255,0.55);
     box-shadow: 0 4px 22px rgba(0,0,0,0.55);
-    transition: transform 0.2s;
+    transition: all 0.32s cubic-bezier(0.4, 0, 0.2, 1);
   }
   .vc-pip:hover { transform: scale(1.04); }
   #localVideo {
@@ -206,7 +206,7 @@
     .vc-pip { width: 88px; height: 60px; bottom: 70px; right: 8px; }
   }
 
-  /* PiP swap */
+  /* PiP swap — animated, bidirectional */
   .vc-card.swapped #remoteVideo {
     position: absolute;
     bottom: 82px; right: 14px;
@@ -214,11 +214,15 @@
     border-radius: 10px;
     border: 2px solid rgba(255,255,255,0.55);
     z-index: 20; object-fit: cover;
+    cursor: pointer;           /* clicking swaps back */
+    transition: all 0.32s cubic-bezier(0.4, 0, 0.2, 1);
   }
+  .vc-card.swapped #remoteVideo:hover { border-color: #fff; }
   .vc-card.swapped .vc-pip {
     width: 100%; height: 100%;
     bottom: 0; right: 0;
     border: none; border-radius: 0; z-index: 1;
+    transform: none; /* reset hover scale when fullscreen */
   }
   .vc-card.swapped #localVideo { transform: scaleX(-1); }
 
@@ -282,6 +286,16 @@
   @media (max-width: 991px) {
     .vc-btn-hud.is-doctor { display: flex; }
   }
+
+  /* ── Extra Features (Toast) ── */
+  .vc-toast {
+    position: absolute; top: 60px; left: 50%; transform: translateX(-50%);
+    background: rgba(0,0,0,0.78); color: #fff; font-size: 0.8rem; font-weight: 600;
+    padding: 6px 16px; border-radius: 20px; z-index: 50;
+    opacity: 0; pointer-events: none; transition: opacity 0.3s;
+    backdrop-filter: blur(8px); border: 1px solid rgba(255,255,255,0.1);
+  }
+  .vc-toast.show { opacity: 1; }
 
   /* ═══════════════════════════════════════════
      DOCTOR HUD SIDEBAR
@@ -424,6 +438,9 @@
     <!-- Call timer (top-right) -->
     <div class="vc-timer" id="vc-timer">00:00</div>
 
+    <!-- Toast notification -->
+    <div class="vc-toast" id="vc-toast"></div>
+
     <!-- Local PiP (bottom-right) -->
     <div class="vc-pip" id="local-pip">
       <video id="localVideo" autoplay playsinline muted></video>
@@ -457,6 +474,31 @@
         <svg id="cam-off" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:none">
           <line x1="1" y1="1" x2="23" y2="23"/>
           <path d="M21 21H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h3m3-3h6l2 3h3a2 2 0 0 1 2 2v9.34m-7.72-2.06A4 4 0 1 1 7.72 9.72"/>
+        </svg>
+      </button>
+
+      <!-- Speaker -->
+      <button class="vc-btn vc-btn-white" id="btn-speaker" title="Toggle Speaker">
+        <svg id="spk-on" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+          <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+        </svg>
+        <svg id="spk-off" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:none">
+          <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+          <line x1="23" y1="9" x2="17" y2="15"></line><line x1="17" y1="9" x2="23" y2="15"></line>
+        </svg>
+      </button>
+
+      <!-- Filter -->
+      <button class="vc-btn vc-btn-white" id="btn-filter" title="Face Filters">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="10"></circle>
+          <line x1="14.31" y1="8" x2="20.05" y2="17.94"></line>
+          <line x1="9.69" y1="8" x2="21.17" y2="8"></line>
+          <line x1="7.38" y1="12" x2="13.12" y2="2.06"></line>
+          <line x1="9.69" y1="16" x2="3.95" y2="6.06"></line>
+          <line x1="14.31" y1="16" x2="2.83" y2="16"></line>
+          <line x1="16.62" y1="12" x2="10.88" y2="21.94"></line>
         </svg>
       </button>
 
@@ -657,6 +699,10 @@
         alert('This call room is full. Please try again.');
         location.href = RETURN_URL;
         break;
+
+      case 'set-filter':
+        if (remoteVideo) remoteVideo.style.filter = msg.filter;
+        break;
     }
   };
 
@@ -803,6 +849,43 @@
     document.getElementById('cam-off').style.display = camOn ? 'none' : '';
   });
 
+  /* ── Speaker & Filter ─────────── */
+  function showToast(msg) {
+    const toast = document.getElementById('vc-toast');
+    toast.textContent = msg;
+    toast.classList.add('show');
+    clearTimeout(toast.timeout);
+    toast.timeout = setTimeout(() => toast.classList.remove('show'), 2000);
+  }
+
+  let speakerOn = true;
+  document.getElementById('btn-speaker').addEventListener('click', function() {
+    speakerOn = !speakerOn;
+    remoteVideo.volume = speakerOn ? 1.0 : 0.2; // 0.2 simulates low-volume earpiece mode
+    this.classList.toggle('off', !speakerOn);
+    document.getElementById('spk-on').style.display = speakerOn ? '' : 'none';
+    document.getElementById('spk-off').style.display = speakerOn ? 'none' : '';
+    showToast(speakerOn ? 'Speaker mode: ON' : 'Speaker mode: OFF');
+  });
+
+  const filters = [
+    { name: 'Normal', css: 'none' },
+    { name: 'Warm', css: 'sepia(0.35) saturate(1.4) hue-rotate(-5deg) brightness(1.1)' },
+    { name: 'Cool', css: 'saturate(1.2) hue-rotate(15deg) brightness(1.05) contrast(1.1)' },
+    { name: 'B&W', css: 'grayscale(1) contrast(1.1)' },
+    { name: 'Vintage', css: 'sepia(0.6) contrast(1.2) brightness(0.9) hue-rotate(-15deg)' },
+    { name: 'Dreamy', css: 'blur(3px) brightness(1.1) saturate(1.2)' }
+  ];
+  let filterIdx = 0;
+
+  document.getElementById('btn-filter').addEventListener('click', () => {
+    filterIdx = (filterIdx + 1) % filters.length;
+    localVideo.style.filter = filters[filterIdx].css;
+    showToast('Filter: ' + filters[filterIdx].name);
+    send({ action: 'set-filter', filter: filters[filterIdx].css });
+  });
+
+  /* ── End Call ─────────────────────────────────────────────────── */
   document.getElementById('btn-end').addEventListener('click', () => {
     cleanup();
     location.href = RETURN_URL;
@@ -816,9 +899,19 @@
   }
   window.addEventListener('beforeunload', cleanup);
 
-  /* ── PiP swap ────────────────────────────────────────────────── */
-  document.getElementById('local-pip').addEventListener('click', () => {
-    document.getElementById('vc-card').classList.toggle('swapped');
+  /* ── PiP swap (click either small view to swap — like WhatsApp) ── */
+  const vcCard = document.getElementById('vc-card');
+
+  function swapVideos() {
+    vcCard.classList.toggle('swapped');
+  }
+
+  // Click the local PiP (normal state) → swap
+  document.getElementById('local-pip').addEventListener('click', swapVideos);
+
+  // Click the remote video (when it's the small view in swapped state) → swap back
+  remoteVideo.addEventListener('click', () => {
+    if (vcCard.classList.contains('swapped')) swapVideos();
   });
 
   /* ── HUD toggle (mobile / tablet doctor) ─────────────────────── */
