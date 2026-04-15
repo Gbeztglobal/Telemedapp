@@ -18,21 +18,25 @@ def video_call_room(request, room_name):
             target_id = id2 if request.user.id == id1 else id1
             target_user = User.objects.get(id=target_id)
             
-            # Trigger live ring
-            from channels.layers import get_channel_layer
-            from asgiref.sync import async_to_sync
-            channel_layer = get_channel_layer()
-            async_to_sync(channel_layer.group_send)(
-                f'notify_{target_user.id}',
-                {
-                    'type': 'send_notification',
-                    'message': 'Incoming Call',
-                    'count': target_user.notifications.filter(is_read=False).count(),
-                    'action': 'INCOMING_CALL',
-                    'caller_name': request.user.get_full_name() or request.user.username,
-                    'room_url': request.get_full_path()
-                }
-            )
+            # Only ring when explicitly initiated (ring=1), not on page reload or accept
+            if request.GET.get('ring') == '1':
+                from channels.layers import get_channel_layer
+                from asgiref.sync import async_to_sync
+                channel_layer = get_channel_layer()
+                # Build the accept URL without the ring param
+                call_url = request.path  # just the path, no query params
+                async_to_sync(channel_layer.group_send)(
+                    f'notify_{target_user.id}',
+                    {
+                        'type': 'send_notification',
+                        'message': 'Incoming Call',
+                        'count': target_user.notifications.filter(is_read=False).count(),
+                        'action': 'INCOMING_CALL',
+                        'caller_name': request.user.get_full_name() or request.user.username,
+                        'room_url': call_url,
+                        'caller_id': request.user.id
+                    }
+                )
         except Exception:
             pass
     elif room_name.isdigit():

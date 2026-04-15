@@ -21,17 +21,40 @@ class NotificationConsumer(AsyncWebsocketConsumer):
                 self.channel_name
             )
 
+    async def receive(self, text_data):
+        """Handle messages FROM the client (e.g. decline/accept call)."""
+        data = json.loads(text_data)
+        action = data.get('action')
+
+        if action == 'CALL_DECLINED':
+            # Notify the caller that the call was declined
+            caller_id = data.get('caller_id')
+            if caller_id:
+                await self.channel_layer.group_send(
+                    f'notify_{caller_id}',
+                    {
+                        'type': 'send_notification',
+                        'message': 'Call was declined',
+                        'count': 0,
+                        'action': 'CALL_DECLINED',
+                        'caller_name': '',
+                        'room_url': ''
+                    }
+                )
+
     async def send_notification(self, event):
         message = event.get('message', '')
         count = event.get('count', 0)
         action = event.get('action', 'STANDARD')
         caller = event.get('caller_name', '')
         room_url = event.get('room_url', '')
+        caller_id = event.get('caller_id', '')
 
         await self.send(text_data=json.dumps({
             'message': message,
             'count': count,
             'action': action,
             'caller_name': caller,
-            'room_url': room_url
+            'room_url': room_url,
+            'caller_id': caller_id
         }))

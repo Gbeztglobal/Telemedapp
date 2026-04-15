@@ -217,11 +217,55 @@
         const notifyScheme = window.location.protocol === "https:" ? "wss" : "ws";
         const notifySocket = new WebSocket(`${notifyScheme}://${window.location.host}/ws/notifications/`);
         
+        // Track active call modal to prevent duplicates
+        let activeCallModalId = null;
+        let activeCallTimeout = null;
+
+        function dismissCallModal() {
+            if (activeCallModalId) {
+                const modal = document.getElementById(activeCallModalId);
+                if (modal) {
+                    // Stop ringtone
+                    const audio = modal.querySelector('audio');
+                    if (audio) { audio.pause(); audio.currentTime = 0; }
+                    modal.remove();
+                }
+                activeCallModalId = null;
+            }
+            if (activeCallTimeout) {
+                clearTimeout(activeCallTimeout);
+                activeCallTimeout = null;
+            }
+        }
+
+        function declineCall(callerId) {
+            // Send decline notification to caller via WebSocket
+            if (notifySocket.readyState === WebSocket.OPEN) {
+                notifySocket.send(JSON.stringify({
+                    action: 'CALL_DECLINED',
+                    caller_id: callerId
+                }));
+            }
+            dismissCallModal();
+        }
+
+        function acceptCall(roomUrl) {
+            dismissCallModal();
+            window.location.href = roomUrl;
+        }
+
         notifySocket.onmessage = function(e) {
             const data = JSON.parse(e.data);
             
             if (data.action === "INCOMING_CALL") {
+                // Prevent duplicate call modals
+                dismissCallModal();
+
                 const modalId = 'callModal' + Date.now();
+                activeCallModalId = modalId;
+                const callerId = data.caller_id || '';
+                const roomUrl = data.room_url || '';
+
                 const modalEl = document.createElement('div');
                 modalEl.className = 'incoming-call-overlay';
                 modalEl.id = modalId;
@@ -238,26 +282,42 @@
                                 </div>
                             </div>
                             <div class="d-flex gap-2">
-                                <button class="btn btn-danger rounded-pill px-4" onclick="document.getElementById('${modalId}').remove(); document.getElementById('ringtone-${modalId}').pause();">Decline</button>
-                                <a href="${data.room_url}" class="btn btn-success fw-bold rounded-pill px-4 text-white text-decoration-none d-flex align-items-center gap-2">
+                                <button class="btn btn-danger rounded-pill px-4" onclick="declineCall('${callerId}')">Decline</button>
+                                <button class="btn btn-success fw-bold rounded-pill px-4 text-white d-flex align-items-center gap-2" onclick="acceptCall('${roomUrl}')">
                                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
-                                    Accept Call
-                                </a>
+                                    Accept
+                                </button>
                             </div>
                         </div>
-                        <audio id="ringtone-${modalId}" loop autoplay playsinline>
+                        <audio loop autoplay playsinline>
                             <source src="https://www.soundjay.com/phone/telephone-ring-03a.mp3" type="audio/mpeg">
                         </audio>
                     </div>
                 `;
                 document.body.appendChild(modalEl);
-                // Auto dismiss after 30s
-                setTimeout(() => {
-                    const activeModal = document.getElementById(modalId);
-                    if(activeModal) activeModal.remove();
+
+                // Auto dismiss after 30s (missed call)
+                activeCallTimeout = setTimeout(() => {
+                    dismissCallModal();
                 }, 30000);
+
+            } else if (data.action === "CALL_DECLINED") {
+                // The receiver declined — show toast to caller
+                const toastEl = document.createElement('div');
+                toastEl.className = 'toast align-items-center text-white border-0';
+                toastEl.style.background = '#e74c3c';
+                toastEl.setAttribute('role', 'alert');
+                toastEl.innerHTML = `
+                  <div class="d-flex">
+                    <div class="toast-body fw-bold">📞 Call was declined</div>
+                    <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+                  </div>
+                `;
+                document.getElementById('toast-container').appendChild(toastEl);
+                new bootstrap.Toast(toastEl, { delay: 5000 }).show();
+
             } else {
-                // Standard Pop Toast
+                // Standard notification toast
                 const toastId = 'toast' + Date.now();
                 const toastEl = document.createElement('div');
                 toastEl.className = 'toast align-items-center text-white border-0';

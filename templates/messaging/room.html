@@ -8,25 +8,36 @@
 <style>
     body.chat-page-bg {
         background: #f0f4f8;
+        overflow: hidden; /* prevent body scroll behind chat */
     }
 
-    /* ── Full-height chat shell ── */
+    /* ── Full-height chat shell — fixed to viewport ── */
     .wa-shell {
         display: flex;
         flex-direction: column;
-        height: calc(100vh - 88px); /* subtract navbar + top margin */
+        position: fixed;
+        top: 72px; /* navbar height */
+        left: 0;
+        right: 0;
+        bottom: 0;
         max-width: 900px;
-        margin: 16px auto;
-        border-radius: 12px;
+        margin: 0 auto;
+        border-radius: 12px 12px 0 0;
         overflow: hidden;
-        box-shadow: 0 10px 40px rgba(0,0,0,0.12);
+        box-shadow: 0 -4px 40px rgba(0,0,0,0.12);
+        z-index: 50;
     }
     @media (max-width: 991.98px) {
         .wa-shell {
-            height: calc(100vh - 58px);
+            top: 56px; /* smaller navbar on tablet */
             border-radius: 0;
-            margin: 0;
             box-shadow: none;
+        }
+    }
+    @media (max-width: 575.98px) {
+        .wa-shell {
+            top: 0; /* full screen on mobile — hide navbar */
+            border-radius: 0;
         }
     }
 
@@ -36,9 +47,10 @@
         padding: 12px 16px;
         display: flex;
         align-items: center;
-        gap: 14px;
+        gap: 12px;
         flex-shrink: 0;
         z-index: 10;
+        padding-top: max(12px, env(safe-area-inset-top, 12px));
     }
     .wa-back-btn {
         color: rgba(255,255,255,0.85);
@@ -46,9 +58,10 @@
         display: flex;
         align-items: center;
         transition: color 0.2s;
+        flex-shrink: 0;
     }
     .wa-back-btn:hover { color: #fff; }
-    .wa-avatar-wrap { position: relative; }
+    .wa-avatar-wrap { position: relative; flex-shrink: 0; }
     .wa-avatar {
         width: 42px;
         height: 42px;
@@ -66,7 +79,7 @@
         bottom: 1px;
         right: 1px;
     }
-    .wa-user-info { flex: 1; }
+    .wa-user-info { flex: 1; min-width: 0; /* allow text truncation */ }
     .wa-user-name {
         color: #fff;
         font-weight: 700;
@@ -74,16 +87,23 @@
         letter-spacing: 0.3px;
         margin: 0;
         line-height: 1.2;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
     }
     .wa-user-status {
         color: rgba(255,255,255,0.7);
         font-size: 0.75rem;
         margin: 0;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
     }
     .wa-actions {
         display: flex;
         align-items: center;
         gap: 6px;
+        flex-shrink: 0;
     }
     .wa-action-btn {
         width: 40px;
@@ -115,9 +135,11 @@
     .wa-messages {
         flex: 1;
         overflow-y: auto;
+        overflow-x: hidden;
         padding: 20px 16px;
         background: #f0f4f8;
         background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='60' height='60' opacity='0.04'%3E%3Cpath d='M30 0L60 30L30 60L0 30Z' fill='%230A3D62'/%3E%3C/svg%3E");
+        -webkit-overflow-scrolling: touch;
     }
 
     /* Date separator */
@@ -163,6 +185,7 @@
         position: relative;
         box-shadow: 0 1px 2px rgba(0,0,0,0.08);
         word-wrap: break-word;
+        overflow-wrap: break-word;
         line-height: 1.45;
         font-size: 0.93rem;
         color: #111;
@@ -199,8 +222,8 @@
     .wa-audio-bubble {
         display: flex;
         align-items: center;
-        gap: 12px;
-        min-width: 200px;
+        gap: 10px;
+        min-width: 160px;
     }
     .wa-audio-play {
         width: 36px;
@@ -236,9 +259,10 @@
     .wa-input-bar {
         background: #f0f2f5;
         padding: 10px 12px;
+        padding-bottom: max(10px, env(safe-area-inset-bottom, 10px));
         display: flex;
         align-items: flex-end;
-        gap: 10px;
+        gap: 8px;
         flex-shrink: 0;
     }
     .wa-icon-btn {
@@ -263,11 +287,12 @@
         flex: 1;
         background: #fff;
         border-radius: 24px;
-        padding: 10px 18px;
+        padding: 10px 16px;
         display: flex;
         align-items: center;
         gap: 8px;
         box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+        min-width: 0; /* allow shrinking */
     }
     .wa-input-wrap input {
         flex: 1;
@@ -276,12 +301,13 @@
         background: transparent;
         color: #111;
         font-size: 0.95rem;
+        min-width: 0;
     }
     .wa-input-wrap input::placeholder { color: #aaa; }
 
     .wa-send-btn {
-        width: 48px;
-        height: 48px;
+        width: 44px;
+        height: 44px;
         border-radius: 50%;
         background: #25D366;
         border: none;
@@ -316,19 +342,21 @@
     /* Reply Bar */
     .wa-reply-bar {
         background: #f0f4f8; border-left: 4px solid #25D366; padding: 8px 14px;
-        margin: 0 12px; border-radius: 0 8px 8px 0; display: none; align-items: center; gap: 10px;
+        margin: 0; border-radius: 0; display: none; align-items: center; gap: 10px;
+        flex-shrink: 0;
     }
     .wa-reply-bar.active { display: flex; }
-    .wa-reply-preview { flex: 1; }
+    .wa-reply-preview { flex: 1; min-width: 0; }
     .wa-reply-name { font-size: 0.75rem; font-weight: 800; color: #25D366; }
-    .wa-reply-text { font-size: 0.82rem; color: #555; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 400px; }
-    .wa-reply-close { width: 28px; height: 28px; border-radius: 50%; border: none; background: transparent; color: #999; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+    .wa-reply-text { font-size: 0.82rem; color: #555; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .wa-reply-close { width: 28px; height: 28px; border-radius: 50%; border: none; background: transparent; color: #999; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
     .wa-reply-close:hover { background: rgba(0,0,0,0.06); }
 
     /* Edit mode bar */
     .wa-edit-bar {
         background: #fff8e1; border-left: 4px solid #f0ad4e; padding: 8px 14px;
-        margin: 0 12px; border-radius: 0 8px 8px 0; display: none; align-items: center; gap: 10px;
+        margin: 0; border-radius: 0; display: none; align-items: center; gap: 10px;
+        flex-shrink: 0;
     }
     .wa-edit-bar.active { display: flex; }
     .wa-edit-label { font-size: 0.82rem; font-weight: 700; color: #b8860b; flex: 1; }
@@ -355,6 +383,92 @@
     .wa-bubble-row:hover .wa-bubble-chevron { display: flex; }
     .wa-bubble-row.sent .wa-bubble-chevron { background: rgba(217,253,211,0.9); }
     .wa-bubble-row.sent .wa-bubble-chevron:hover { background: rgba(0,0,0,0.06); }
+
+    /* ══════════════════════════════════════════
+       MOBILE RESPONSIVE — Small screens
+       ══════════════════════════════════════════ */
+    @media (max-width: 575.98px) {
+        /* Header compact */
+        .wa-header {
+            padding: 10px 10px;
+            gap: 10px;
+        }
+        .wa-avatar {
+            width: 36px;
+            height: 36px;
+        }
+        .wa-user-name { font-size: 0.9rem; }
+        .wa-user-status { font-size: 0.68rem; }
+        .wa-action-btn {
+            width: 34px;
+            height: 34px;
+        }
+        .wa-action-btn svg { width: 17px; height: 17px; }
+        .wa-actions { gap: 4px; }
+
+        /* Messages */
+        .wa-messages { padding: 12px 10px; }
+        .wa-bubble {
+            max-width: 80%;
+            font-size: 0.88rem;
+            padding: 7px 10px 5px;
+        }
+        .wa-msg-avatar { width: 24px; height: 24px; }
+        .wa-bubble-row { gap: 6px; }
+
+        /* Input bar compact */
+        .wa-input-bar {
+            padding: 8px 8px;
+            gap: 6px;
+        }
+        .wa-icon-btn {
+            width: 36px;
+            height: 36px;
+        }
+        .wa-icon-btn svg { width: 18px; height: 18px; }
+        .wa-input-wrap {
+            padding: 9px 14px;
+            border-radius: 22px;
+        }
+        .wa-input-wrap input { font-size: 0.9rem; }
+        .wa-send-btn {
+            width: 40px;
+            height: 40px;
+        }
+        .wa-send-btn svg { width: 17px; height: 17px; }
+
+        /* Audio bubble */
+        .wa-audio-bubble { min-width: 140px; gap: 8px; }
+        .wa-audio-play { width: 30px; height: 30px; }
+
+        /* Reply / Edit bars */
+        .wa-reply-bar, .wa-edit-bar { padding: 6px 10px; }
+        .wa-reply-text { font-size: 0.78rem; }
+
+        /* Context menu */
+        .wa-ctx-menu {
+            min-width: 160px;
+            border-radius: 10px;
+        }
+        .wa-ctx-item {
+            padding: 10px 14px;
+            font-size: 0.84rem;
+        }
+    }
+
+    /* Extra-small screens (< 360px) */
+    @media (max-width: 359px) {
+        .wa-header { padding: 8px; gap: 8px; }
+        .wa-avatar { width: 32px; height: 32px; }
+        .wa-user-name { font-size: 0.82rem; }
+        .wa-action-btn { width: 30px; height: 30px; }
+        .wa-action-btn svg { width: 15px; height: 15px; }
+        .wa-bubble { max-width: 85%; font-size: 0.84rem; }
+        .wa-send-btn { width: 36px; height: 36px; }
+        .wa-icon-btn { width: 32px; height: 32px; }
+        /* Hide attach & voice on very small screens to save space */
+        .wa-input-bar .wa-icon-btn { display: none; }
+    }
 </style>
 {% endblock %}
 
@@ -379,13 +493,13 @@
         </div>
         <div class="wa-actions">
             <!-- Audio Call -->
-            <a href="{% url 'video_call_room' room_name=room_name %}?audio_only=1" class="wa-action-btn" title="Audio Call">
+            <a href="{% url 'video_call_room' room_name=room_name %}?audio_only=1&ring=1" class="wa-action-btn" title="Audio Call">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 2.59 3.4L15.3 15.3a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>
                 </svg>
             </a>
             <!-- Video Call -->
-            <a href="{% url 'video_call_room' room_name=room_name %}" class="wa-action-btn video" title="Video Call">
+            <a href="{% url 'video_call_room' room_name=room_name %}?ring=1" class="wa-action-btn video" title="Video Call">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <polygon points="23 7 16 12 23 17 23 7"/>
                     <rect x="1" y="5" width="15" height="14" rx="2" ry="2"/>
