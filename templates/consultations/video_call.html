@@ -746,10 +746,12 @@
 
   /* ── Peer connection ──────────────────────────────────────────── */
   function createPeerConnection() {
-    if (peerConn) peerConn.close();
+    if (peerConn) {
+      peerConn.close();
+      iceCandidateQueue = []; // Clear only if tearing down an active old connection
+    }
     peerConn         = new RTCPeerConnection(ICE_CFG);
     remoteDescSet    = false;
-    iceCandidateQueue = [];
 
     peerConn.onicecandidate = ({ candidate }) => {
       if (candidate) send({ action: 'new-ice-candidate', candidate });
