@@ -1,414 +1,697 @@
 {% extends 'base.html' %}
-
-{% block title %}Video Consultation - TeleMD{% endblock %}
-{% block body_class %}bg-light-blue{% endblock %}
+{% block title %}{% if is_audio_only %}Audio{% else %}Video{% endif %} Call - TeleMD{% endblock %}
+{% block body_class %}call-page{% endblock %}
 {% block nav_class %}solid-nav{% endblock %}
 
-{% block content %}
+{% block extra_css %}
 <style>
-    .video-card {
+    /* ── Full-screen call shell ── */
+    body.call-page {
         background: #1c1c1e;
-        border-radius: 20px;
-        height: 75vh;
-        width: 100%;
-        position: relative;
         overflow: hidden;
-        box-shadow: 0 10px 30px rgba(0,0,0,0.1);
     }
-    .hud-card {
-        background: #fff;
-        border-radius: 20px;
-        height: 75vh;
-        padding: 25px;
-        overflow-y: auto;
-        box-shadow: 0 5px 20px rgba(0,0,0,0.03);
-    }
-    .hud-header-title {
-        font-weight: 800;
-        color: #0A3D62;
+    body.call-page .navbar { display: none !important; }
+    body.call-page > .container { display: none !important; }
+
+    .call-shell {
+        position: fixed;
+        inset: 0;
         display: flex;
-        align-items: center;
-        gap: 8px;
+        flex-direction: column;
+        background: #1c1c1e;
+        z-index: 9999;
+        user-select: none;
     }
-    
-    .hud-section-label {
-        font-size: 0.75rem;
-        font-weight: 800;
-        color: #7b8a97;
-        text-transform: uppercase;
-        margin: 20px 0 15px;
-        letter-spacing: 0.5px;
-    }
-    
-    /* Risk cards styling */
-    .risk-card {
-        border-radius: 12px;
-        padding: 15px;
-        margin-bottom: 15px;
-        border-left: 4px solid #ddd;
-    }
-    .risk-card.high {
-        background: #fdf2f2;
-        border-left-color: #dc3545;
-    }
-    .risk-card.medium {
-        background: #f4fbf8;
-        border-left-color: #00a896;
-    }
-    
-    .video-header-pill {
-        position: absolute;
-        top: 25px;
-        left: 25px;
-        background: rgba(0,0,0,0.4);
-        backdrop-filter: blur(10px);
-        border: 1px solid rgba(255,255,255,0.1);
-        border-radius: 30px;
-        padding: 8px 20px 8px 8px;
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        z-index: 10;
-        color: white;
-    }
-    .video-header-pill img {
-        width: 40px;
-        height: 40px;
-        border-radius: 50%;
-        background: #e9ecef;
-    }
-    .waiting-pill {
-        position: absolute;
-        top: 25px;
-        left: 50%;
-        transform: translateX(-50%);
-        background: rgba(0,0,0,0.5);
-        backdrop-filter: blur(10px);
-        border: 1px solid rgba(255,255,255,0.1);
-        border-radius: 20px;
-        padding: 8px 20px;
-        color: #00a896;
-        font-size: 0.85rem;
-        font-weight: 500;
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        z-index: 10;
-    }
-    
+
+    /* ── Remote video (main view) ── */
     #remoteVideo {
+        position: absolute;
+        inset: 0;
         width: 100%;
         height: 100%;
         object-fit: cover;
-        cursor: pointer;
-        transition: all 0.3s ease;
+        background: #1c1c1e;
+        z-index: 1;
     }
-    
-    .local-video-wrap {
+
+    /* ── Overlay gradient for readability ── */
+    .call-overlay {
         position: absolute;
-        bottom: 25px;
-        right: 25px;
-        width: 200px;
-        height: 140px;
-        border-radius: 12px;
-        background: #333;
-        z-index: 10;
-        padding: 2px;
-        border: 2px solid rgba(255,255,255,0.8);
-        cursor: pointer;
-        transition: all 0.3s ease;
+        inset: 0;
+        background: linear-gradient(
+            to bottom,
+            rgba(0,0,0,0.45) 0%,
+            transparent 30%,
+            transparent 65%,
+            rgba(0,0,0,0.7) 100%
+        );
+        z-index: 2;
+        pointer-events: none;
     }
+
+    /* ── Top bar ── */
+    .call-top-bar {
+        position: absolute;
+        top: 0; left: 0; right: 0;
+        padding: 20px 20px 0;
+        z-index: 10;
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+    }
+    .call-peer-info { display: flex; align-items: center; gap: 12px; }
+    .call-peer-avatar {
+        width: 46px; height: 46px;
+        border-radius: 50%;
+        border: 2px solid rgba(255,255,255,0.4);
+        object-fit: cover;
+    }
+    .call-peer-name {
+        color: #fff;
+        font-size: 1.1rem;
+        font-weight: 700;
+        text-shadow: 0 1px 4px rgba(0,0,0,0.5);
+        margin: 0;
+    }
+    .call-status {
+        color: rgba(255,255,255,0.8);
+        font-size: 0.78rem;
+        margin: 2px 0 0;
+        display: flex; align-items: center; gap: 6px;
+    }
+    .call-status .dot {
+        width: 7px; height: 7px;
+        border-radius: 50%;
+        background: #ccc;
+        animation: blink 1.5s infinite;
+    }
+    .call-status.connected .dot { background: #25D366; animation: none; }
+    .call-timer {
+        color: #fff;
+        font-size: 0.9rem;
+        font-weight: 600;
+        font-variant-numeric: tabular-nums;
+        text-shadow: 0 1px 4px rgba(0,0,0,0.5);
+        display: none;
+        padding-top: 4px;
+    }
+    @keyframes blink { 0%,100% { opacity: 1; } 50% { opacity: 0.3; } }
+
+    /* ── Local video (picture-in-picture) ── */
+    .local-pip {
+        position: absolute;
+        bottom: 140px; right: 18px;
+        width: 110px; height: 160px;
+        border-radius: 14px;
+        background: #333;
+        border: 2px solid rgba(255,255,255,0.6);
+        overflow: hidden;
+        z-index: 10;
+        cursor: pointer;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+        transition: all 0.25s ease;
+    }
+    .local-pip:hover { transform: scale(1.05); }
+    .local-pip.swapped { inset: 0; width: 100%; height: 100%; border-radius: 0; border: none; z-index: 1; bottom: auto; right: auto; }
     #localVideo {
-        width: 100%;
-        height: 100%;
-        border-radius: 10px;
+        width: 100%; height: 100%;
         object-fit: cover;
         transform: scaleX(-1);
-    }
-    
-    /* PiP Swapped State */
-    .video-card.swapped #remoteVideo {
-        position: absolute;
-        bottom: 25px;
-        right: 25px;
-        width: 200px;
-        height: 140px;
         border-radius: 12px;
-        border: 2px solid rgba(255,255,255,0.8);
-        z-index: 10;
     }
-    .video-card.swapped .local-video-wrap {
-        width: 100%;
-        height: 100%;
-        bottom: 0;
-        right: 0;
-        border: none;
-        border-radius: 20px;
-        z-index: 1;
-        padding: 0;
-    }
-    .video-card.swapped #localVideo {
-        border-radius: 20px;
-    }
-    
-    .controls-bar {
+    .local-pip.swapped #localVideo { border-radius: 0; }
+
+    /* ── Waiting state (before peer joins) ── */
+    .call-waiting {
         position: absolute;
-        bottom: 30px;
-        left: 50%;
-        transform: translateX(-50%);
-        background: rgba(0,0,0,0.4);
-        backdrop-filter: blur(10px);
-        border-radius: 40px;
-        padding: 10px 15px;
+        inset: 0;
         display: flex;
-        gap: 15px;
-        z-index: 10;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        z-index: 5;
+        background: linear-gradient(135deg, #0A3D62 0%, #1a5276 100%);
     }
-    .btn-circle {
-        width: 50px;
-        height: 50px;
+    .call-waiting .waiting-avatar {
+        width: 100px; height: 100px;
         border-radius: 50%;
+        border: 4px solid rgba(255,255,255,0.3);
+        margin-bottom: 20px;
+        animation: pulse-avatar 2s infinite;
+    }
+    @keyframes pulse-avatar {
+        0%,100% { box-shadow: 0 0 0 0 rgba(255,255,255,0.3); }
+        50% { box-shadow: 0 0 0 20px rgba(255,255,255,0); }
+    }
+    .call-waiting h3 { color: #fff; font-weight: 700; margin-bottom: 8px; }
+    .call-waiting p { color: rgba(255,255,255,0.7); font-size: 0.9rem; }
+    .call-waiting .ring-dots span {
+        display: inline-block;
+        width: 8px; height: 8px;
+        border-radius: 50%;
+        background: rgba(255,255,255,0.6);
+        margin: 0 3px;
+        animation: ring-bounce 1.2s infinite;
+    }
+    .call-waiting .ring-dots span:nth-child(2) { animation-delay: 0.2s; }
+    .call-waiting .ring-dots span:nth-child(3) { animation-delay: 0.4s; }
+    @keyframes ring-bounce {
+        0%,80%,100% { transform: scale(0.6); opacity: 0.4; }
+        40% { transform: scale(1); opacity: 1; }
+    }
+
+    /* ── Call ended state ── */
+    .call-ended-screen {
+        position: absolute;
+        inset: 0;
+        display: none;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        z-index: 20;
+        background: rgba(0,0,0,0.85);
+        backdrop-filter: blur(6px);
+    }
+    .call-ended-screen.active { display: flex; }
+    .call-ended-screen .ended-icon {
+        width: 80px; height: 80px;
+        border-radius: 50%;
+        background: #e74c3c;
+        display: flex; align-items: center; justify-content: center;
+        margin-bottom: 20px;
+    }
+    .call-ended-screen h3 { color: #fff; font-weight: 700; margin-bottom: 8px; }
+    .call-ended-screen p { color: rgba(255,255,255,0.6); margin-bottom: 30px; }
+    .call-ended-screen .btn-return {
+        background: #fff;
+        color: #0A3D62;
         border: none;
+        border-radius: 30px;
+        padding: 12px 32px;
+        font-weight: 700;
+        font-size: 1rem;
+        cursor: pointer;
+        text-decoration: none;
+        transition: all 0.2s;
+    }
+    .call-ended-screen .btn-return:hover { background: #f0f4f8; transform: scale(1.03); }
+
+    /* ── Controls bar ── */
+    .call-controls {
+        position: absolute;
+        bottom: 40px; left: 0; right: 0;
+        z-index: 10;
         display: flex;
         align-items: center;
         justify-content: center;
+        gap: 18px;
+    }
+    .ctrl-btn {
+        display: flex; flex-direction: column; align-items: center; gap: 6px;
+        background: none; border: none; cursor: pointer; padding: 0;
+    }
+    .ctrl-icon {
+        width: 58px; height: 58px;
+        border-radius: 50%;
+        display: flex; align-items: center; justify-content: center;
         transition: all 0.2s;
     }
-    .btn-white {
-        background: #fff;
-        color: #333;
+    .ctrl-btn:hover .ctrl-icon { transform: scale(1.08); }
+    .ctrl-icon.white { background: rgba(255,255,255,0.18); backdrop-filter: blur(6px); color: #fff; }
+    .ctrl-icon.white.muted { background: rgba(255,255,255,0.9); color: #333; }
+    .ctrl-icon.red { background: #e74c3c; color: #fff; width: 68px; height: 68px; }
+    .ctrl-icon.red:hover { background: #c0392b; }
+    .ctrl-icon.green { background: #25D366; color: #fff; }
+    .ctrl-label {
+        color: rgba(255,255,255,0.8);
+        font-size: 0.7rem;
+        font-weight: 600;
     }
-    .btn-white:hover {
-        background: #e9ecef;
+
+    /* Audio-only mode */
+    .audio-only-bg {
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(135deg, #0A3D62 0%, #1a5276 100%);
+        display: flex; flex-direction: column; align-items: center; justify-content: center;
+        z-index: 3;
     }
-    .btn-white.disabled {
-        background: rgba(255,255,255,0.5);
+    .audio-only-bg img {
+        width: 120px; height: 120px;
+        border-radius: 50%;
+        border: 4px solid rgba(255,255,255,0.3);
+        margin-bottom: 20px;
     }
-    .btn-red {
-        background: #ff4757;
-        color: #fff;
-    }
-    .btn-red:hover {
-        background: #ff6b81;
+    .audio-only-bg h3 { color: #fff; font-weight: 700; margin: 0 0 4px; }
+    .audio-only-bg p { color: rgba(255,255,255,0.6); font-size: 0.85rem; margin: 0; }
+
+    /* ── Mobile tweaks ── */
+    @media (max-width: 575.98px) {
+        .local-pip { width: 90px; height: 130px; bottom: 120px; right: 12px; }
+        .call-controls { gap: 12px; bottom: 30px; }
+        .ctrl-icon { width: 52px; height: 52px; }
+        .ctrl-icon.red { width: 62px; height: 62px; }
+        .ctrl-label { font-size: 0.65rem; }
+        .call-peer-name { font-size: 0.95rem; }
     }
 </style>
+{% endblock %}
 
-<div class="row mt-4 mb-5">
-    <div class="{% if user.role == 'DOCTOR' %}col-lg-8{% else %}col-12{% endif %}">
-        <div class="video-card">
-            
-            <div class="video-header-pill">
-                <img src="https://api.dicebear.com/7.x/avataaars/svg?seed={{ target_user.username }}&backgroundColor=ffdfbf" alt="User">
-                <div>
-                    <h6 class="mb-0 fw-bold" style="font-size: 0.95rem;">{{ target_user.first_name|default:target_user.username }}</h6>
-                    <small style="font-size: 0.75rem; opacity: 0.7;">{{ target_user.get_role_display }}</small>
-                </div>
-            </div>
-            
-            <!-- Connection Status -->
-            <div class="waiting-pill" id="conn-badge">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
-                <span id="conn-text">Encrypted Session Active</span>
-            </div>
-            
-            <!-- Video Elements -->
-            <video id="remoteVideo" autoplay playsinline></video>
-            
-            <div class="local-video-wrap">
-                <video id="localVideo" autoplay playsinline muted></video>
-            </div>
-            
-            <!-- Call Controls -->
-            <div class="controls-bar">
-                <button id="toggleAudio" class="btn-circle btn-white">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" class="icon-on" stroke="currentColor" stroke-width="2"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
-                </button>
-                <button id="toggleVideo" class="btn-circle btn-white">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" class="icon-on" stroke="currentColor" stroke-width="2"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
-                </button>
-                <button id="toggleFilter" class="btn-circle btn-white" title="Video Filters">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
-                </button>
-                <a href="{{ return_url|default:'/dashboard/' }}" class="btn-circle btn-red" id="btn-end-call" style="display:inline-flex; align-items:center; justify-content:center; text-decoration:none;" onclick="endCall(event)">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.68 13.31a16 16 0 0 0 3.41 2.6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7 2 2 0 0 1 1.72 2v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.42 19.42 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 2.59 3.4z"/><line x1="23" y1="1" x2="1" y2="23"/></svg>
-                </a>
-            </div>
-        </div>
-    </div>
-    
-    {% if user.role == 'DOCTOR' %}
-    <div class="col-lg-4">
-        <div class="hud-card">
-            <h5 class="hud-header-title">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
-                Patient Records HUD
-            </h5>
-            <p class="text-muted small mb-0">Live Clinical Feed</p>
-            
-            <div class="hud-section-label">RECENT HEALTH RISKS</div>
-            
-            {% if diagnoses %}
-                {% for dx in diagnoses %}
-                <div class="risk-card {% if dx.malaria_risk == 'High' or dx.cholera_risk == 'High' or dx.is_urgent %}high{% else %}medium{% endif %}">
-                    <div class="d-flex justify-content-between align-items-center mb-2">
-                        <span class="fw-bold fs-6">{{ dx.created_at|date:"M d" }}</span>
-                        <span class="badge {% if dx.is_urgent %}bg-danger{% else %}bg-success{% endif %} rounded-pill px-3 py-1">
-                            {% if dx.is_urgent %}High Risk{% else %}Medium Risk{% endif %}
-                        </span>
-                    </div>
-                    <small class="text-muted d-block opacity-75">
-                        "{{ dx.symptoms_reported|truncatechars:80 }}"
-                    </small>
-                </div>
-                {% endfor %}
-            {% else %}
-                <p class="text-muted small text-center my-4 py-3 border rounded-3" style="border-style: dashed !important;">No recent AI diagnosis risk tags found.</p>
-            {% endif %}
-            
-            <div class="hud-section-label mt-4">REQUESTED PRESCRIPTIONS</div>
-            <p class="text-muted small text-center my-4 py-3 border rounded-3" style="border-style: dashed !important;">No active prescription requests.</p>
-        </div>
-    </div>
-    {% endif %}
-</div>
+{% block content %}{% endblock %}
 
+{% block extra_js %}
 {{ room_name|json_script:"room-name" }}
 <script id="audio-only-flag" type="application/json">{% if is_audio_only %}true{% else %}false{% endif %}</script>
+<script id="return-url-data" type="application/json">"{{ return_url|default:'/dashboard/'|escapejs }}"</script>
+
+<div class="call-shell" id="call-shell">
+
+    <!-- Remote video -->
+    <video id="remoteVideo" autoplay playsinline></video>
+
+    <!-- Gradient overlay -->
+    <div class="call-overlay"></div>
+
+    {% if is_audio_only %}
+    <!-- Audio-only background -->
+    <div class="audio-only-bg" id="audio-bg">
+        <img src="https://api.dicebear.com/7.x/avataaars/svg?seed={{ target_user.username }}&backgroundColor=1e2a3b" alt="{{ target_user.username }}">
+        <h3>{{ target_user.get_full_name|default:target_user.username|title }}</h3>
+        <p id="audio-status-text">Connecting...</p>
+    </div>
+    {% endif %}
+
+    <!-- Waiting state (shown before peer joins) -->
+    <div class="call-waiting" id="call-waiting">
+        <img src="https://api.dicebear.com/7.x/avataaars/svg?seed={{ target_user.username }}&backgroundColor=1e2a3b" class="waiting-avatar" alt="">
+        <h3>{{ target_user.get_full_name|default:target_user.username|title }}</h3>
+        <p>{% if is_audio_only %}Audio call{% else %}Video call{% endif %} • Ringing...</p>
+        <div class="ring-dots mt-2">
+            <span></span><span></span><span></span>
+        </div>
+    </div>
+
+    <!-- Call ended screen -->
+    <div class="call-ended-screen" id="call-ended-screen">
+        <div class="ended-icon">
+            <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5">
+                <path d="M10.68 13.31a16 16 0 0 0 3.41 2.6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7 2 2 0 0 1 1.72 2v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.42 19.42 0 0 1 3.14 12.7 19.79 19.79 0 0 1 .07 4.07 2 2 0 0 1 2.06 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L6.09 9.91"/>
+                <line x1="23" y1="1" x2="1" y2="23"/>
+            </svg>
+        </div>
+        <h3 id="ended-title">Call Ended</h3>
+        <p id="ended-duration"></p>
+        <a href="{{ return_url|default:'/dashboard/' }}" class="btn-return">Back to Chat</a>
+    </div>
+
+    <!-- Top bar -->
+    <div class="call-top-bar" id="call-top-bar" style="display:none;">
+        <div class="call-peer-info">
+            <img src="https://api.dicebear.com/7.x/avataaars/svg?seed={{ target_user.username }}&backgroundColor=1e2a3b" class="call-peer-avatar" alt="">
+            <div>
+                <p class="call-peer-name">{{ target_user.get_full_name|default:target_user.username|title }}</p>
+                <div class="call-status" id="call-status">
+                    <span class="dot"></span>
+                    <span id="status-text">Connecting...</span>
+                </div>
+            </div>
+        </div>
+        <div class="call-timer" id="call-timer">00:00</div>
+    </div>
+
+    <!-- Local PiP video -->
+    <div class="local-pip" id="local-pip" onclick="swapVideos()">
+        <video id="localVideo" autoplay playsinline muted></video>
+    </div>
+
+    <!-- Controls -->
+    <div class="call-controls">
+        <button class="ctrl-btn" onclick="toggleMic()" id="mic-btn" title="Mute/Unmute">
+            <div class="ctrl-icon white" id="mic-icon">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
+                    <path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/>
+                </svg>
+            </div>
+            <span class="ctrl-label" id="mic-label">Mute</span>
+        </button>
+
+        {% if not is_audio_only %}
+        <button class="ctrl-btn" onclick="toggleCamera()" id="cam-btn" title="Toggle video">
+            <div class="ctrl-icon white" id="cam-icon">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/>
+                </svg>
+            </div>
+            <span class="ctrl-label" id="cam-label">Video</span>
+        </button>
+        {% endif %}
+
+        <!-- End call (prominent red) -->
+        <button class="ctrl-btn" onclick="endCall()" title="End call">
+            <div class="ctrl-icon red">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                    <path d="M10.68 13.31a16 16 0 0 0 3.41 2.6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7 2 2 0 0 1 1.72 2v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.42 19.42 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 2.59 3.4z"/>
+                    <line x1="23" y1="1" x2="1" y2="23"/>
+                </svg>
+            </div>
+            <span class="ctrl-label">End</span>
+        </button>
+
+        {% if not is_audio_only %}
+        <button class="ctrl-btn" onclick="switchCamera()" title="Switch camera">
+            <div class="ctrl-icon white">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M20 7h-3a2 2 0 0 1-2-2 3 3 0 0 0-6 0 2 2 0 0 1-2 2H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2z"/>
+                    <circle cx="12" cy="13" r="3"/>
+                </svg>
+            </div>
+            <span class="ctrl-label">Flip</span>
+        </button>
+        {% endif %}
+
+        <button class="ctrl-btn" onclick="toggleSpeaker()" title="Speaker">
+            <div class="ctrl-icon white" id="spk-icon">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
+                    <path d="M19.07 4.93a10 10 0 0 1 0 14.14"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/>
+                </svg>
+            </div>
+            <span class="ctrl-label">Speaker</span>
+        </button>
+    </div>
+</div>
+
 <script>
-    const roomName = JSON.parse(document.getElementById('room-name').textContent);
-    const localVideo = document.getElementById('localVideo');
-    const remoteVideo = document.getElementById('remoteVideo');
-    const RETURN_URL = "{{ return_url|default:'/dashboard/' }}";
-    
-    let localStream;
-    let peerConnection;
+const roomName   = JSON.parse(document.getElementById('room-name').textContent);
+const isAudioOnly = JSON.parse(document.getElementById('audio-only-flag').textContent);
+const RETURN_URL  = JSON.parse(document.getElementById('return-url-data').textContent);
 
-    function endCall(e) {
-        e.preventDefault();
-        // Stop all media tracks to release camera/mic
-        if (localStream) localStream.getTracks().forEach(t => t.stop());
-        if (peerConnection) peerConnection.close();
-        // Navigate back to chat room
-        window.location.href = RETURN_URL;
-    }
-    
-    const wsScheme = window.location.protocol === "https:" ? "wss" : "ws";
-    const socket = new WebSocket(`${wsScheme}://${window.location.host}/ws/call/${roomName}/`);
-    
-    const servers = {
-        iceServers: [
-            { urls: 'stun:stun.l.google.com:19302' },
-            { urls: 'stun:stun1.l.google.com:19302' }
-        ]
-    };
+const wsScheme = location.protocol === 'https:' ? 'wss' : 'ws';
+const socket   = new WebSocket(`${wsScheme}://${location.host}/ws/call/${roomName}/`);
 
-    socket.onopen = async () => {
-        console.log("WebSocket connected.");
-        await startLocalStream();
-        createPeerConnection();
-        // createOffer(); // commented out for mockup
-    };
+const servers = {
+    iceServers: [
+        { urls: 'stun:stun.l.google.com:19302' },
+        { urls: 'stun:stun1.l.google.com:19302' },
+        { urls: 'stun:stun2.l.google.com:19302' },
+    ]
+};
 
-    socket.onmessage = async (event) => {
-        const data = JSON.parse(event.data);
-        const action = data.action;
-        
-        if (action === 'new-offer') {
-            await peerConnection.setRemoteDescription(new RTCSessionDescription(data.offer));
-            const answer = await peerConnection.createAnswer();
-            await peerConnection.setLocalDescription(answer);
-            socket.send(JSON.stringify({
-                action: 'new-answer',
-                answer: answer
-            }));
-        }
-        if (action === 'new-answer') {
-            if (peerConnection.signalingState !== "stable") {
-                await peerConnection.setRemoteDescription(new RTCSessionDescription(data.answer));
-            }
-        }
-        if (action === 'new-ice-candidate') {
-            try {
-                await peerConnection.addIceCandidate(new RTCIceCandidate(data.candidate));
-            } catch (e) {
-                console.error('Error adding received ice candidate', e);
-            }
+let localStream    = null;
+let peerConnection = null;
+let isInitiator    = false;
+let micOn          = true;
+let camOn          = true;
+let currentFacing  = 'user';
+let callStartTime  = null;
+let timerInterval  = null;
+let callEnded      = false;
+let speakerOn      = true;
+
+// ── DOM refs ──
+const remoteVideo  = document.getElementById('remoteVideo');
+const localVideo   = document.getElementById('localVideo');
+const waitingEl    = document.getElementById('call-waiting');
+const topBar       = document.getElementById('call-top-bar');
+const callTimer    = document.getElementById('call-timer');
+const statusEl     = document.getElementById('call-status');
+const statusText   = document.getElementById('status-text');
+const endedScreen  = document.getElementById('call-ended-screen');
+const endedTitle   = document.getElementById('ended-title');
+const endedDur     = document.getElementById('ended-duration');
+const audioBg      = document.getElementById('audio-bg');
+const audioStatusTxt = document.getElementById('audio-status-text');
+
+// ── Media constraints with echo/noise suppression ──
+function getConstraints() {
+    return {
+        audio: {
+            echoCancellation: true,
+            noiseSuppression: true,
+            autoGainControl: true,
+            sampleRate: 48000
+        },
+        video: isAudioOnly ? false : {
+            facingMode: currentFacing,
+            width: { ideal: 1280 }, height: { ideal: 720 },
+            frameRate: { ideal: 30 }
         }
     };
+}
 
-    const enableVideo = document.getElementById('audio-only-flag').textContent === 'false';
-
-    async function startLocalStream() {
+// ── Start local stream ──
+async function startLocalStream() {
+    try {
+        localStream = await navigator.mediaDevices.getUserMedia(getConstraints());
+        localVideo.srcObject = localStream;
+    } catch (err) {
+        console.warn('Media error:', err);
+        // Try audio-only fallback
         try {
-            localStream = await navigator.mediaDevices.getUserMedia({ 
-                video: enableVideo, 
-                audio: true 
-            });
+            localStream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } });
             localVideo.srcObject = localStream;
-        } catch (err) {
-            console.error("Error accessing media devices.", err);
+        } catch (e) { console.error('Cannot access mic/camera', e); }
+    }
+}
+
+// ── Create Peer Connection ──
+function createPC() {
+    peerConnection = new RTCPeerConnection(servers);
+
+    // Add local tracks
+    if (localStream) {
+        localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
+    }
+
+    // ICE candidates
+    peerConnection.onicecandidate = (e) => {
+        if (e.candidate) {
+            socket.send(JSON.stringify({ action: 'new-ice-candidate', candidate: e.candidate }));
+        }
+    };
+
+    // Remote stream
+    peerConnection.ontrack = (e) => {
+        remoteVideo.srcObject = e.streams[0];
+        showConnected();
+    };
+
+    // Connection state monitoring
+    peerConnection.onconnectionstatechange = () => {
+        const state = peerConnection.connectionState;
+        if (state === 'connected') showConnected();
+        else if (state === 'disconnected' || state === 'failed') {
+            if (!callEnded) showCallEnded('Connection Lost');
+        }
+    };
+}
+
+// ── Create offer (initiator side) ──
+async function createOffer() {
+    createPC();
+    const offer = await peerConnection.createOffer();
+    await peerConnection.setLocalDescription(offer);
+    socket.send(JSON.stringify({ action: 'new-offer', offer: offer }));
+}
+
+// ── WebSocket messages ──
+socket.onopen = async () => {
+    await startLocalStream();
+};
+
+socket.onmessage = async (event) => {
+    const data = JSON.parse(event.data);
+
+    if (data.action === 'peer-joined') {
+        // The second peer connected — first peer creates offer
+        if (!isInitiator && !peerConnection) {
+            isInitiator = true;
+            await createOffer();
         }
     }
 
-    function createPeerConnection() {
-        peerConnection = new RTCPeerConnection(servers);
-        
-        peerConnection.onicecandidate = (event) => {
-            if (event.candidate) {
-                socket.send(JSON.stringify({
-                    action: 'new-ice-candidate',
-                    candidate: event.candidate
-                }));
+    else if (data.action === 'new-offer') {
+        if (!peerConnection) createPC();
+        await peerConnection.setRemoteDescription(new RTCSessionDescription(data.offer));
+        const answer = await peerConnection.createAnswer();
+        await peerConnection.setLocalDescription(answer);
+        socket.send(JSON.stringify({ action: 'new-answer', answer: answer }));
+    }
+
+    else if (data.action === 'new-answer') {
+        if (peerConnection && peerConnection.signalingState !== 'stable') {
+            await peerConnection.setRemoteDescription(new RTCSessionDescription(data.answer));
+        }
+    }
+
+    else if (data.action === 'new-ice-candidate') {
+        try {
+            if (peerConnection && data.candidate) {
+                await peerConnection.addIceCandidate(new RTCIceCandidate(data.candidate));
             }
-        };
-        
-        peerConnection.ontrack = (event) => {
-            remoteVideo.srcObject = event.streams[0];
-            // Hide waiting pill when connected
-            document.querySelector('.waiting-pill').style.display = 'none';
-        };
-        
-        if (localStream) {
-            localStream.getTracks().forEach((track) => {
-                peerConnection.addTrack(track, localStream);
-            });
-        }
+        } catch (e) { console.warn('ICE error:', e); }
     }
 
-    // Toggles
-    document.getElementById('toggleVideo').addEventListener('click', function() {
-        if(!localStream) return;
-        let track = localStream.getVideoTracks()[0];
-        track.enabled = !track.enabled;
-        this.classList.toggle('disabled');
-    });
+    else if (data.action === 'call-ended') {
+        if (!callEnded) showCallEnded('Call Ended');
+    }
+};
 
-    document.getElementById('toggleAudio').addEventListener('click', function() {
-        if(!localStream) return;
-        let track = localStream.getAudioTracks()[0];
-        track.enabled = !track.enabled;
-        this.classList.toggle('disabled');
-    });
+socket.onclose = () => {
+    if (!callEnded) showCallEnded('Connection Lost');
+};
 
-    // PiP Swap Logic
-    const videoCard = document.querySelector('.video-card');
-    document.querySelector('.local-video-wrap').addEventListener('click', (e) => {
-        if(!videoCard.classList.contains('swapped')) {
-            videoCard.classList.add('swapped');
+// ── Call connected UI ──
+function showConnected() {
+    waitingEl.style.display = 'none';
+    topBar.style.display = 'flex';
+    callTimer.style.display = 'block';
+    statusEl.classList.add('connected');
+    statusText.textContent = 'Connected';
+    if (audioBg) {
+        if (audioStatusTxt) audioStatusTxt.textContent = 'Connected';
+    }
+
+    // Start timer
+    if (!callStartTime) {
+        callStartTime = Date.now();
+        timerInterval = setInterval(updateTimer, 1000);
+    }
+}
+
+function updateTimer() {
+    const elapsed = Math.floor((Date.now() - callStartTime) / 1000);
+    const m = String(Math.floor(elapsed / 60)).padStart(2, '0');
+    const s = String(elapsed % 60).padStart(2, '0');
+    callTimer.textContent = m + ':' + s;
+}
+
+function getElapsedStr() {
+    if (!callStartTime) return '';
+    const elapsed = Math.floor((Date.now() - callStartTime) / 1000);
+    const m = Math.floor(elapsed / 60);
+    const s = elapsed % 60;
+    return `Duration: ${m}m ${s}s`;
+}
+
+// ── End call ──
+function endCall() {
+    if (callEnded) return;
+    callEnded = true;
+
+    // Signal the other peer
+    if (socket.readyState === WebSocket.OPEN) {
+        socket.send(JSON.stringify({ action: 'call-ended' }));
+    }
+    socket.close();
+
+    cleanupMedia();
+    showCallEnded('Call Ended');
+}
+
+function cleanupMedia() {
+    if (timerInterval) clearInterval(timerInterval);
+    if (localStream) localStream.getTracks().forEach(t => t.stop());
+    if (peerConnection) peerConnection.close();
+}
+
+function showCallEnded(title) {
+    callEnded = true;
+    cleanupMedia();
+    endedTitle.textContent = title;
+    endedDur.textContent = getElapsedStr();
+    endedScreen.classList.add('active');
+    // Auto-redirect after 4 seconds
+    setTimeout(() => { window.location.href = RETURN_URL; }, 4000);
+}
+
+// ── Mic toggle ──
+function toggleMic() {
+    if (!localStream) return;
+    const track = localStream.getAudioTracks()[0];
+    if (!track) return;
+    micOn = !micOn;
+    track.enabled = micOn;
+    const icon = document.getElementById('mic-icon');
+    const label = document.getElementById('mic-label');
+    if (micOn) {
+        icon.classList.remove('muted');
+        label.textContent = 'Mute';
+        icon.innerHTML = `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>`;
+    } else {
+        icon.classList.add('muted');
+        label.textContent = 'Unmute';
+        icon.innerHTML = `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="1" y1="1" x2="23" y2="23"/><path d="M9 9v3a3 3 0 0 0 5.12 2.12M15 9.34V4a3 3 0 0 0-5.94-.6"/><path d="M17 16.95A7 7 0 0 1 5 12v-2m14 0v2c0 .39-.03.77-.08 1.14"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>`;
+    }
+}
+
+// ── Camera toggle ──
+function toggleCamera() {
+    if (!localStream) return;
+    const track = localStream.getVideoTracks()[0];
+    if (!track) return;
+    camOn = !camOn;
+    track.enabled = camOn;
+    const icon = document.getElementById('cam-icon');
+    const label = document.getElementById('cam-label');
+    if (camOn) {
+        icon.classList.remove('muted');
+        label.textContent = 'Video';
+    } else {
+        icon.classList.add('muted');
+        label.textContent = 'No Video';
+    }
+}
+
+// ── Switch camera (front/back) ──
+async function switchCamera() {
+    if (!localStream || isAudioOnly) return;
+    currentFacing = currentFacing === 'user' ? 'environment' : 'user';
+    try {
+        const newStream = await navigator.mediaDevices.getUserMedia({
+            video: { facingMode: currentFacing, width: { ideal: 1280 }, height: { ideal: 720 } },
+            audio: false
+        });
+        const newTrack = newStream.getVideoTracks()[0];
+        localVideo.srcObject = new MediaStream([newTrack, ...localStream.getAudioTracks()]);
+
+        if (peerConnection) {
+            const sender = peerConnection.getSenders().find(s => s.track && s.track.kind === 'video');
+            if (sender) await sender.replaceTrack(newTrack);
         }
-    });
-    document.getElementById('remoteVideo').addEventListener('click', (e) => {
-        if(videoCard.classList.contains('swapped')) {
-            videoCard.classList.remove('swapped');
-        }
-    });
 
-    // Video Filters Logic
-    const filters = ['none', 'grayscale(100%)', 'sepia(100%)', 'hue-rotate(90deg)', 'hue-rotate(180deg)', 'contrast(150%)', 'blur(4px)'];
-    let currentFilterIndex = 0;
-    document.getElementById('toggleFilter').addEventListener('click', function() {
-        currentFilterIndex = (currentFilterIndex + 1) % filters.length;
-        localVideo.style.filter = filters[currentFilterIndex];
-    });
+        // Stop old video track
+        localStream.getVideoTracks().forEach(t => t.stop());
+        localStream = new MediaStream([newTrack, ...localStream.getAudioTracks()]);
+    } catch (e) { console.warn('Camera switch failed:', e); }
+}
+
+// ── Speaker toggle (mobile) ──
+function toggleSpeaker() {
+    speakerOn = !speakerOn;
+    // On mobile, setSinkId is used when available
+    if (remoteVideo.setSinkId) {
+        remoteVideo.setSinkId(speakerOn ? '' : 'communications').catch(() => {});
+    }
+    const icon = document.getElementById('spk-icon');
+    icon.classList.toggle('muted', !speakerOn);
+}
+
+// ── Swap PiP ──
+let swapped = false;
+function swapVideos() {
+    const pip = document.getElementById('local-pip');
+    pip.classList.toggle('swapped');
+    swapped = !swapped;
+}
+
+// ── Prevent accidental page close during call ──
+window.addEventListener('beforeunload', (e) => {
+    if (!callEnded) {
+        endCall();
+        e.preventDefault();
+    }
+});
 </script>
 {% endblock %}
