@@ -4,4 +4,5 @@ set -o errexit
 
 pip install -r requirements.txt
 
-python manage.py collectstatic --no-input
+# --skip-checks avoids Django connecting to the DB during build
+python manage.py collectstatic --no-input --skip-checks
