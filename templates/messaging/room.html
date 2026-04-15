@@ -35,9 +35,13 @@
         }
     }
     @media (max-width: 575.98px) {
+        /* Hide navbar on mobile chat for full WhatsApp-like experience */
+        .navbar { display: none !important; }
+
         .wa-shell {
-            top: 0; /* full screen on mobile — hide navbar */
+            top: 0; /* full screen on mobile */
             border-radius: 0;
+            z-index: 1030; /* above Bootstrap navbar z-index (1020) */
         }
     }
 
